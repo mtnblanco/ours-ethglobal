@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optional: Set default background color to avoid white flashes */
+body {
+  background-color: #2c2e63;
+  color: #faf9f6;
+  font-family: 'Century Gothic', 'CenturyGothic', 'AppleGothic', sans-serif;
+  font-weight: bold;
+}
