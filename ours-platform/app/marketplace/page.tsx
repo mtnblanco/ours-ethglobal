@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Search, Filter, ArrowUpRight, Building2, MapPin } from 'lucide-react';
+import { Search, Filter, MapPin } from 'lucide-react';
 
 // Mock Data for Real Estate Assets
 const properties = [
@@ -57,8 +57,23 @@ export default function MarketplacePage() {
   const [filter, setFilter] = useState('All');
 
   return (
-    <div className="min-h-screen bg-brand-dark text-brand-light pt-24 pb-12 px-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-brand-dark text-brand-light">
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full z-50 bg-brand-dark/80 backdrop-blur-md border-b border-brand-primary/20">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <img src="/logo.svg" alt="Ours Logo" className="h-8 w-auto" />
+            <img src="/logo tipografico celeste.svg" alt="Ours" className="h-6 w-auto" />
+          </Link>
+          <div className="flex gap-6 text-sm font-medium text-brand-light/80">
+            <Link href="/" className="hover:text-brand-primary transition-colors">Home</Link>
+            <Link href="#" className="text-brand-primary">Marketplace</Link>
+          </div>
+        </div>
+      </nav>
+
+      <div className="pt-24 pb-12 px-6">
+        <div className="max-w-7xl mx-auto">
 
         {/* Header & Controls */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
@@ -162,7 +177,7 @@ export default function MarketplacePage() {
             </motion.div>
           ))}
         </div>
-
+        </div>
       </div>
     </div>
   );
