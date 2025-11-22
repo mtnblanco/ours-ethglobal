@@ -5,6 +5,7 @@ export const CONTRACT_ADDRESSES = {
   SALE_MANAGER: process.env.NEXT_PUBLIC_SALE_MANAGER_ADDRESS || '0x29D5fF6a3fe9df89869c08E6B416ae8C976449b4',
   REVENUE_DISTRIBUTOR: process.env.NEXT_PUBLIC_REVENUE_DISTRIBUTOR_ADDRESS || '0xD99C9ad06FeD65FcB3AE660316DBbCC285786712',
   USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x5dEd3c7441BC7B4E3d12F69462f518C7b49C9388',
+  KYC_ISSUER: process.env.NEXT_PUBLIC_KYC_ISSUER_ADDRESS || '0x0000000000000000000000000000000000000000', // TODO: Update when deployed
 };
 
 // PropertyRegistry ABI (minimal for marketplace use)
@@ -119,3 +120,25 @@ export interface PropertyWithSale {
   sale: Sale;
   saleIsActive: boolean;
 }
+
+// ChainlinkKYCIssuer ABI (for KYC verification)
+export const KYC_ISSUER_ABI = [
+  // View functions
+  "function isKYCVerified(address user) external view returns (bool)",
+  "function getKYCData(address user) external view returns (tuple(uint8 status, bytes32 nullifierHash, uint256 requestedAt, uint256 approvedAt, bytes32 kycDataHash, address onchainIDAddress) kycData)",
+  "function kycData(address user) external view returns (uint8 status, bytes32 nullifierHash, uint256 requestedAt, uint256 approvedAt, bytes32 kycDataHash, address onchainIDAddress)",
+  "function usedNullifiers(bytes32 nullifierHash) external view returns (bool)",
+  "function totalKYCsApproved() external view returns (uint256)",
+  "function rejectionCooldown() external view returns (uint256)",
+  
+  // Transaction functions
+  "function requestKYCWithWorldID(uint256 signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) external",
+  "function fulfillKYC(address user, bool approved, bytes32 kycDataHash) external",
+  
+  // Testing functions (only available in development)
+  "function mockRequestKYCForTesting(address user) external",
+  
+  // Events
+  "event KYCRequested(address indexed user, bytes32 indexed nullifierHash, uint256 timestamp)",
+  "event KYCFulfilled(address indexed user, bool approved, bytes32 kycDataHash)"
+];
