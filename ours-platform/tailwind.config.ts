@@ -10,8 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        // The design specifically requests Century Gothic
-        sans: ['"Century Gothic"', 'CenturyGothic', 'AppleGothic', 'sans-serif'],
+        sans: ['var(--font-gothic)', 'sans-serif'],
       },
       colors: {
         brand: {
