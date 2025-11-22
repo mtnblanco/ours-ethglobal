@@ -1,0 +1,43 @@
+{
+  "name": "kyc_verification_workflow",
+  "version": "1.0",
+  "steps": [
+    {
+      "id": "get_applicant_id",
+      "type": "http.get",
+      "url": "{{ applicantIdLookupUrl }}/{{ user }}",
+      "headers": {
+        "Authorization": "Bearer {{ lookupApiToken }}",
+        "Content-Type": "application/json"
+      }
+    },
+    {
+      "id": "onfido_check",
+      "type": "http.get",
+      "url": "https://api.onfido.com/v3/checks/{{ get_applicant_id.response.applicantId }}",
+      "headers": {
+        "Authorization": "Token token={{ onfidoApiToken }}",
+        "Content-Type": "application/json"
+      }
+    },
+    {
+      "id": "hash_result",
+      "type": "javascript",
+      "code": "const data = JSON.stringify(input.onfido_check.response); return { hash: web3.utils.keccak256(data) };"
+    },
+    {
+      "id": "fulfill_kyc",
+      "type": "evm.write",
+      "network": "worldchain-sepolia",
+      "abi": "./abis/ChainlinkKYCIssuer.json",
+      "function": "fulfillKYC",
+      "args": [
+        "{{ user }}",
+        "{{ onfido_check.response.result === 'clear' }}",
+        "{{ hash_result.hash }}"
+      ],
+      "to": "{{ kycIssuerAddress }}"
+    }
+  ]
+}
+
