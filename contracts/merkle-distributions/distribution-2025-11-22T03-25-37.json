@@ -1,0 +1,49 @@
+{
+  "merkleRoot": "0x94a275a32218a3004635e0a37425066e938d13416df6f88dbe1ccdb3adc466f7",
+  "totalAmount": "1000000000",
+  "totalAmountFormatted": "1000.0 USDC",
+  "holdersCount": 4,
+  "generatedAt": "2025-11-22T03:25:37.058Z",
+  "holders": [
+    {
+      "address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "amount": "100000000",
+      "amountFormatted": "100.0 USDC",
+      "proof": [
+        "0x8ae87e47fb4432b9358e4ff3f96ca92087e4fc85d98e2fcbc98f45cea720a57b",
+        "0x4893078eb7036ee80b46bb392d12419ac90caf71466baa6b94c9cc2a4afeaac0"
+      ],
+      "leaf": "0x620e75d8ddcda6bfc23f32d08d0ed8abab4d0f8d6e793582a26a4c9636c9db8b"
+    },
+    {
+      "address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "amount": "250000000",
+      "amountFormatted": "250.0 USDC",
+      "proof": [
+        "0x620e75d8ddcda6bfc23f32d08d0ed8abab4d0f8d6e793582a26a4c9636c9db8b",
+        "0x4893078eb7036ee80b46bb392d12419ac90caf71466baa6b94c9cc2a4afeaac0"
+      ],
+      "leaf": "0x8ae87e47fb4432b9358e4ff3f96ca92087e4fc85d98e2fcbc98f45cea720a57b"
+    },
+    {
+      "address": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+      "amount": "150000000",
+      "amountFormatted": "150.0 USDC",
+      "proof": [
+        "0xed2b2c59a6f6ba2dc068d8f07392cd5254860c7c41f75cbc8657963044c71253",
+        "0x5abaa69269b7ecacf25c461f8cbc5007d557a3959679a5857c50a52fdd9a9789"
+      ],
+      "leaf": "0xccf0dc1698400edc571f40935981e65a4ec609f2f2842dc077f467b2191a099e"
+    },
+    {
+      "address": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+      "amount": "500000000",
+      "amountFormatted": "500.0 USDC",
+      "proof": [
+        "0xccf0dc1698400edc571f40935981e65a4ec609f2f2842dc077f467b2191a099e",
+        "0x5abaa69269b7ecacf25c461f8cbc5007d557a3959679a5857c50a52fdd9a9789"
+      ],
+      "leaf": "0xed2b2c59a6f6ba2dc068d8f07392cd5254860c7c41f75cbc8657963044c71253"
+    }
+  ]
+}

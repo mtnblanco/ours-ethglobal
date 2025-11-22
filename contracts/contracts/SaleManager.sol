@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../lib/ERC3643/contracts/token/IToken.sol";
+import "./PropertyRegistry.sol";
 
 /**
  * @title SaleManager
@@ -20,7 +21,7 @@ import "../lib/ERC3643/contracts/token/IToken.sol";
  * 
  * Arquitectura de roles:
  * - DEFAULT_ADMIN_ROLE: Administrador de la plataforma (owner)
- * - PROPERTY_ISSUER_ROLE: Constructoras que tokenizан propiedades
+ * - PROPERTY_ISSUER_ROLE: Constructoras que tokenizаn propiedades
  * - Los inversores no necesitan rol especial, solo KYC verificado en el token
  */
 contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
@@ -39,6 +40,9 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Stablecoin utilizada para las compras (USDC)
     IERC20 public stablecoin;
+
+    /// @notice Registro de propiedades tokenizadas
+    PropertyRegistry public propertyRegistry;
 
     /// @notice Comisión de la plataforma en basis points (100 = 1%)
     uint256 public platformFeeBps;
@@ -177,6 +181,16 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         uint256 newFee
     );
 
+    /**
+     * @notice Emitido cuando se actualiza el PropertyRegistry
+     * @param oldRegistry Dirección anterior
+     * @param newRegistry Nueva dirección
+     */
+    event PropertyRegistryUpdated(
+        address indexed oldRegistry,
+        address indexed newRegistry
+    );
+
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -189,9 +203,13 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
     error InvalidAmount();
     error InvalidStablecoin();
     error InvalidFee();
+    error InvalidRegistry();
+    error InvalidRecipient();
     error NotSaleIssuer();
     error NoFundsToWithdraw();
     error InsufficientBalance();
+    error PropertyNotRegistered();
+    error PropertyNotAvailable();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -223,13 +241,20 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
     /**
      * @notice Constructor del contrato
      * @param _stablecoin Dirección del stablecoin (USDC)
+     * @param _propertyRegistry Dirección del PropertyRegistry
      * @param _platformFeeBps Comisión inicial de la plataforma en basis points
      */
-    constructor(address _stablecoin, uint256 _platformFeeBps) {
+    constructor(
+        address _stablecoin, 
+        address _propertyRegistry,
+        uint256 _platformFeeBps
+    ) {
         if (_stablecoin == address(0)) revert InvalidStablecoin();
+        if (_propertyRegistry == address(0)) revert InvalidRegistry();
         if (_platformFeeBps > MAX_PLATFORM_FEE_BPS) revert InvalidFee();
 
         stablecoin = IERC20(_stablecoin);
+        propertyRegistry = PropertyRegistry(_propertyRegistry);
         platformFeeBps = _platformFeeBps;
 
         // El deployer recibe el rol de admin por defecto
@@ -275,6 +300,23 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
     }
 
     /**
+     * @notice Actualiza la dirección del PropertyRegistry
+     * @dev Solo puede ser llamada por el admin
+     * @param _newRegistry Nueva dirección del PropertyRegistry
+     */
+    function setPropertyRegistry(address _newRegistry) 
+        external 
+        onlyRole(DEFAULT_ADMIN_ROLE) 
+    {
+        if (_newRegistry == address(0)) revert InvalidRegistry();
+        
+        address oldRegistry = address(propertyRegistry);
+        propertyRegistry = PropertyRegistry(_newRegistry);
+        
+        emit PropertyRegistryUpdated(oldRegistry, _newRegistry);
+    }
+
+    /**
      * @notice Pausa todas las operaciones del contrato (emergency stop)
      * @dev Solo puede ser llamada por el admin
      */
@@ -287,7 +329,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
      * @dev Solo puede ser llamada por el admin
      */
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
+        _unpause(); //esto es de openzeppelin
     }
 
     /**
@@ -300,7 +342,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         onlyRole(DEFAULT_ADMIN_ROLE)
         nonReentrant
     {
-        if (recipient == address(0)) revert InvalidStablecoin();
+        if (recipient == address(0)) revert InvalidRecipient();
         
         // CHECK
         uint256 amount = accumulatedPlatformFees;
@@ -322,6 +364,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
     /**
      * @notice Crea una nueva venta para un token de propiedad
      * @dev Solo puede ser llamada por una dirección con rol PROPERTY_ISSUER_ROLE
+     *      La propiedad debe estar previamente registrada en el PropertyRegistry
      * @param token Dirección del token ERC-3643 de la propiedad
      * @param pricePerToken Precio en stablecoin por cada token
      */
@@ -337,6 +380,16 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         if (token == address(0)) revert InvalidToken();
         if (pricePerToken == 0) revert InvalidPrice();
         if (saleExists[token]) revert SaleAlreadyExists();
+        
+        // Validar que la propiedad está registrada en el PropertyRegistry
+        if (!propertyRegistry.propertyExists(token)) revert PropertyNotRegistered();
+        
+        // Validar que la propiedad está disponible para venta
+        if (!propertyRegistry.isPropertyAvailable(token)) revert PropertyNotAvailable();
+        
+        // Validar que el caller es el issuer de la propiedad registrada
+        (,address propertyIssuer,,,,,,,,,,,,,,,,) = propertyRegistry.properties(token);
+        if (propertyIssuer != msg.sender) revert NotSaleIssuer();
 
         // EFFECTS
         sales[token] = Sale({
@@ -389,7 +442,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         if (!saleExists[token]) revert SaleDoesNotExist();
 
         // EFFECTS
-        sales[token].isActive = isActive;
+        sales[token].isActive = isActive; //este parametro llega true o false
 
         emit SaleStatusChanged(token, isActive);
     }
@@ -470,7 +523,11 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         stablecoin.safeTransferFrom(msg.sender, address(this), totalCost);
 
         // 2. Mintear tokens al comprador
-        // El token ERC-3643 internamente verifica que el comprador esté KYC-verificado
+        // IMPORTANTE: El token ERC-3643 internamente verifica:
+        //   - identityRegistry.isVerified(msg.sender)
+        //   - compliance.canTransfer(address(0), msg.sender, amount)
+        // Si el comprador NO tiene KYC válido, mint() hará revert
+        // y toda la transacción se revertirá (incluyendo la transferencia de USDC)
         IToken(token).mint(msg.sender, amount);
 
         emit TokensPurchased(msg.sender, token, amount, totalCost, platformFee);
@@ -521,6 +578,286 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
      */
     function isSaleActive(address token) external view returns (bool) {
         return saleExists[token] && sales[token].isActive && !paused();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                INTEGRATION VIEW FUNCTIONS (PROPERTY + SALE)
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Obtiene información completa combinada de propiedad y venta
+     * @param token Dirección del token
+     * @return property Struct Property con información de la propiedad
+     * @return sale Struct Sale con información de la venta
+     * @return saleIsActive Si la venta está activa y disponible
+     */
+    function getPropertyAndSaleInfo(address token) 
+        external 
+        view 
+        returns (
+            PropertyRegistry.Property memory property,
+            Sale memory sale,
+            bool saleIsActive
+        ) 
+    {
+        // Obtener información de la propiedad
+        if (propertyRegistry.propertyExists(token)) {
+            property = propertyRegistry.getProperty(token);
+        }
+        
+        // Obtener información de la venta
+        if (saleExists[token]) {
+            sale = sales[token];
+            saleIsActive = sales[token].isActive && !paused();
+        }
+        
+        return (property, sale, saleIsActive);
+    }
+
+    /**
+     * @notice Obtiene todas las ventas activas de un issuer con su información de propiedad
+     * @param issuer Dirección del issuer
+     * @return tokens Array de direcciones de tokens con ventas activas
+     */
+    function getIssuerActiveSales(address issuer) 
+        external 
+        view 
+        returns (address[] memory tokens) 
+    {
+        // Obtener todas las propiedades del issuer
+        address[] memory allProperties = propertyRegistry.getIssuerProperties(issuer);
+        
+        // Contar cuántas tienen ventas activas
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < allProperties.length; i++) {
+            if (saleExists[allProperties[i]] && sales[allProperties[i]].isActive) {
+                activeCount++;
+            }
+        }
+        
+        // Crear array con solo las activas
+        tokens = new address[](activeCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < allProperties.length; i++) {
+            if (saleExists[allProperties[i]] && sales[allProperties[i]].isActive) {
+                tokens[index] = allProperties[i];
+                index++;
+            }
+        }
+        
+        return tokens;
+    }
+
+    /**
+     * @notice Verifica si una propiedad está lista para crear una venta
+     * @dev Útil para validar antes de llamar a createSale
+     * @param token Dirección del token
+     * @return isReady True si cumple todos los requisitos
+     * @return reason Mensaje descriptivo del estado
+     */
+    function canCreateSale(address token) 
+        external 
+        view 
+        returns (bool isReady, string memory reason) 
+    {
+        // Verificar que no exista ya una venta
+        if (saleExists[token]) {
+            return (false, "Sale already exists");
+        }
+        
+        // Verificar que la propiedad está registrada
+        if (!propertyRegistry.propertyExists(token)) {
+            return (false, "Property not registered");
+        }
+        
+        // Verificar que la propiedad está disponible
+        if (!propertyRegistry.isPropertyAvailable(token)) {
+            return (false, "Property not available");
+        }
+        
+        return (true, "Ready to create sale");
+    }
+
+    /**
+     * @notice Obtiene estadísticas combinadas de una venta
+     * @param token Dirección del token
+     * @return totalUnitsAvailable Unidades totales de la propiedad
+     * @return totalRaised Total recaudado en stablecoin
+     * @return constructionProgress Progreso de construcción (0-100)
+     * @return propertyStatus Estado de la propiedad
+     */
+    function getSaleStats(address token) 
+        external 
+        view 
+        returns (
+            uint256 totalUnitsAvailable,
+            uint256 totalRaised,
+            uint256 constructionProgress,
+            PropertyRegistry.PropertyStatus propertyStatus
+        ) 
+    {
+        if (propertyRegistry.propertyExists(token)) {
+            (,,,,,uint256 units,,,,,,,,,,,,) = propertyRegistry.properties(token);
+            totalUnitsAvailable = units;
+            constructionProgress = propertyRegistry.getConstructionProgress(token);
+            PropertyRegistry.Property memory prop = propertyRegistry.getProperty(token);
+            propertyStatus = prop.status;
+        }
+        
+        if (saleExists[token]) {
+            totalRaised = sales[token].totalRaised;
+        }
+        
+        return (totalUnitsAvailable, totalRaised, constructionProgress, propertyStatus);
+    }
+
+    /**
+     * @notice Obtiene la proyección de inversión para una compra
+     * @dev Combina precio de venta actual con proyección financiera de la propiedad
+     * @param token Dirección del token
+     * @param tokenAmount Cantidad de tokens que planea comprar
+     * @return investmentCost Costo total con comisión de plataforma
+     * @return netInvestment Inversión neta (sin comisión)
+     * @return ownershipPercentageBps Porcentaje de propiedad en bps
+     * @return estimatedReturn Ganancia estimada al vender la propiedad
+     * @return estimatedROIBps ROI estimado en basis points
+     */
+    function getInvestmentProjection(address token, uint256 tokenAmount)
+        external
+        view
+        returns (
+            uint256 investmentCost,
+            uint256 netInvestment,
+            uint256 ownershipPercentageBps,
+            uint256 estimatedReturn,
+            uint256 estimatedROIBps
+        )
+    {
+        if (!saleExists[token]) revert SaleDoesNotExist();
+        
+        Sale memory sale = sales[token];
+        
+        // Calcular costo con comisión
+        uint256 totalCost = sale.pricePerToken * tokenAmount;
+        uint256 platformFee = (totalCost * platformFeeBps) / 10000;
+        
+        investmentCost = totalCost;
+        netInvestment = totalCost - platformFee;
+        
+        // Obtener proyección de PropertyRegistry
+        (
+            , 
+            ownershipPercentageBps, 
+            estimatedReturn, 
+            estimatedROIBps
+        ) = propertyRegistry.getInvestmentProjection(
+            token, 
+            tokenAmount, 
+            sale.pricePerToken
+        );
+        
+        return (
+            investmentCost,
+            netInvestment,
+            ownershipPercentageBps,
+            estimatedReturn,
+            estimatedROIBps
+        );
+    }
+
+    /**
+     * @notice Obtiene información financiera completa para decisión de inversión
+     * @param token Dirección del token
+     * @return pricePerToken Precio actual por token en la venta
+     * @return totalTokenSupply Total de tokens de la propiedad
+     * @return totalInvestmentTarget Meta de recaudación
+     * @return estimatedSalePrice Precio estimado de venta final
+     * @return expectedROIBps ROI máximo esperado en bps
+     * @return totalRaised Total ya recaudado
+     * @return remainingTokens Tokens disponibles para compra
+     */
+    function getInvestmentInfo(address token)
+        external
+        view
+        returns (
+            uint256 pricePerToken,
+            uint256 totalTokenSupply,
+            uint256 totalInvestmentTarget,
+            uint256 estimatedSalePrice,
+            uint256 expectedROIBps,
+            uint256 totalRaised,
+            uint256 remainingTokens
+        )
+    {
+        if (!saleExists[token]) revert SaleDoesNotExist();
+        
+        Sale memory sale = sales[token];
+        pricePerToken = sale.pricePerToken;
+        totalRaised = sale.totalRaised;
+        
+        // Obtener info financiera de PropertyRegistry
+        (
+            totalTokenSupply,
+            totalInvestmentTarget,
+            estimatedSalePrice,
+            ,
+            expectedROIBps
+        ) = propertyRegistry.getFinancialInfo(token);
+        
+        // Calcular tokens restantes (aproximado basado en recaudación)
+        uint256 tokensSold = totalRaised / pricePerToken;
+        remainingTokens = totalTokenSupply > tokensSold ? totalTokenSupply - tokensSold : 0;
+        
+        return (
+            pricePerToken,
+            totalTokenSupply,
+            totalInvestmentTarget,
+            estimatedSalePrice,
+            expectedROIBps,
+            totalRaised,
+            remainingTokens
+        );
+    }
+
+    /**
+     * @notice Ejemplo de cómo se vería una inversión
+     * @dev Útil para mostrar en el frontend un ejemplo con diferentes cantidades
+     * @param token Dirección del token
+     * @return example1 Proyección para 1 token
+     * @return example10 Proyección para 10 tokens
+     * @return example100 Proyección para 100 tokens
+     */
+    function getInvestmentExamples(address token)
+        external
+        view
+        returns (
+            string memory example1,
+            string memory example10,
+            string memory example100
+        )
+    {
+        if (!saleExists[token]) revert SaleDoesNotExist();
+        
+        Sale memory sale = sales[token];
+        
+        // Ejemplo 1 token
+        (uint256 cost1, , , uint256 return1, uint256 roi1) = 
+            this.getInvestmentProjection(token, 1);
+        
+        // Ejemplo 10 tokens
+        (uint256 cost10, , , uint256 return10, uint256 roi10) = 
+            this.getInvestmentProjection(token, 10);
+        
+        // Ejemplo 100 tokens  
+        (uint256 cost100, , , uint256 return100, uint256 roi100) = 
+            this.getInvestmentProjection(token, 100);
+        
+        // Formatear ejemplos (simplificado, en frontend se formatearía mejor)
+        example1 = "1 token";
+        example10 = "10 tokens";
+        example100 = "100 tokens";
+        
+        return (example1, example10, example100);
     }
 }
 
