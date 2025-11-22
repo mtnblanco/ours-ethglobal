@@ -61,29 +61,69 @@ export function useKYC(): KYCHookReturn {
     setError(null);
 
     try {
-      // TODO: En producción, hacer call al contrato ChainlinkKYCIssuer.getKYCData()
-      // Por ahora, simulamos con mock data para demo
-      
-      const mockKYCData: KYCData = {
-        status: KYCStatus.NONE,
-        nullifierHash: '',
-        requestedAt: 0,
-        approvedAt: 0,
-        kycDataHash: '',
-        onchainIDAddress: ''
-      };
-
       console.log('📋 Checking KYC status for user:', worldID.user.address);
       
-      // Simulate contract call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Call backend API to get KYC status from contract
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+      console.log('🔗 Using backend URL:', backendUrl);
+      console.log('🔗 Full URL:', `${backendUrl}/api/v1/kyc/status/${worldID.user.address}`);
       
-      setKycData(mockKYCData);
+      const response = await fetch(`${backendUrl}/api/v1/kyc/status/${worldID.user.address}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Response error text:', errorText);
+        throw new Error(`Failed to fetch KYC status: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 Response data:', result);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch KYC status');
+      }
+
+      // Map backend response to KYCData format
+      const kycStatusData: KYCData = {
+        status: result.kyc_pending ? KYCStatus.WORLD_ID_VERIFIED : KYCStatus.NONE,
+        nullifierHash: result.nullifier_hash || '',
+        requestedAt: result.requested_at || 0,
+        approvedAt: result.approved_at || 0,
+        kycDataHash: result.kyc_data_hash || '',
+        onchainIDAddress: result.onchain_id_address || ''
+      };
+
+      setKycData(kycStatusData);
       setIsLoading(false);
       
     } catch (err) {
-      console.error('Failed to check KYC status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to check KYC status');
+      console.error('❌ KYC Status Check Failed:', err);
+      console.error('❌ Error type:', typeof err);
+      console.error('❌ Error name:', err instanceof Error ? err.name : 'Unknown');
+      console.error('❌ Error message:', err instanceof Error ? err.message : String(err));
+      console.error('❌ Error stack:', err instanceof Error ? err.stack : 'No stack trace');
+      
+      let errorMessage = 'Failed to check KYC status';
+      if (err instanceof Error) {
+        if (err.message.includes('fetch')) {
+          errorMessage = 'Network error: Unable to connect to backend';
+        } else if (err.message.includes('CORS')) {
+          errorMessage = 'CORS error: Cross-origin request blocked';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
       setIsLoading(false);
     }
   };
@@ -113,28 +153,64 @@ export function useKYC(): KYCHookReturn {
         }
       }
 
-      // En producción, esto sería una llamada al contrato:
-      // await kycIssuer.requestKYCWithWorldID(signal, root, nullifierHash, proof)
+      // Call the actual World ID verification endpoint
+      console.log('🔐 Sending World ID proof to backend...');
+
+      // For now, we'll use mock proof data for demo purposes
+      // In a real app, this would come from MiniKit
+      const mockProof = {
+        proof: "mock_proof_for_demo",
+        merkle_root: "mock_merkle_root",
+        nullifier_hash: worldID.user.nullifierHash || "mock_nullifier_hash",
+        verification_level: "device",
+        status: "success"
+      };
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+      console.log('🔗 Using backend URL for World ID:', backendUrl);
       
-      // Para demo, simulamos el proceso
-      console.log('🔐 Generating World ID proof...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await fetch(`${backendUrl}/api/v1/kyc/worldid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          payload: mockProof,
+          action: "kyc-verification",
+          signal: typeof window !== "undefined" ? window.location.href : "kyc-verification",
+          user_address: worldID.user.address
+        }),
+      });
+
+      console.log('📡 World ID Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`KYC request failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
       
-      console.log('✅ World ID verified successfully');
+      if (!result.success) {
+        throw new Error(result.error || 'KYC initiation failed');
+      }
+
+      console.log('✅ World ID verified and KYC initiated on-chain');
+      console.log('📋 Transaction hash:', result.transaction_hash);
       
-      // Simular estado WORLD_ID_VERIFIED
+      // Update KYC data with WORLD_ID_VERIFIED status
       const newKYCData: KYCData = {
         status: KYCStatus.WORLD_ID_VERIFIED,
-        nullifierHash: worldID.user.nullifierHash || 'demo_nullifier',
+        nullifierHash: worldID.user.nullifierHash || mockProof.nullifier_hash,
         requestedAt: Date.now() / 1000,
         approvedAt: 0,
         kycDataHash: '',
         onchainIDAddress: ''
       };
-
+      
       setKycData(newKYCData);
       
-      // Simular que Chainlink procesa en background
+      // For MVP, simulate that Chainlink processes in background
+      // In production, Chainlink DON would listen to the KYCRequested event
       setTimeout(() => {
         console.log('⚡ Chainlink DON processing Onfido verification...');
         simulateChainlinkCallback();
@@ -149,9 +225,7 @@ export function useKYC(): KYCHookReturn {
       setIsLoading(false);
       return false;
     }
-  };
-
-  /**
+  };  /**
    * Simula el callback de Chainlink DON después de verificar Onfido
    * PASO 2: Chainlink ejecuta fulfillKYC()
    */

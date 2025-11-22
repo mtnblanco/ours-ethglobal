@@ -120,7 +120,7 @@ export default function LandingPage() {
 
       // Send World ID proof to backend for KYC processing
       // Following MiniKit documentation format
-      const response = await fetch('http://localhost:8000/api/v1/kyc/worldid', {
+      const response = await fetch('http://localhost:8001/api/v1/kyc/worldid', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

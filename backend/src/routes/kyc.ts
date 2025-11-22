@@ -2,9 +2,55 @@ import { Router, Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { WorldIdService } from '../services/worldId';
 import { BlockchainService } from '../services/blockchain';
+import { OnfidoService } from '../services/onfido';
 import { WorldIdProofRequest, KYCResponse } from '../types';
 
 const router = Router();
+
+// Lazy initialization of services
+let onfidoService: OnfidoService | null = null;
+let worldIdService: WorldIdService | null = null;
+let blockchainService: BlockchainService | null = null;
+
+const getOnfidoService = (): OnfidoService => {
+  if (!onfidoService) {
+    try {
+      onfidoService = new OnfidoService();
+    } catch (error) {
+      console.warn('⚠️ Onfido service not available:', error);
+      throw error;
+    }
+  }
+  return onfidoService;
+};
+
+const getWorldIdService = (): WorldIdService => {
+  if (!worldIdService) {
+    try {
+      worldIdService = new WorldIdService();
+      console.log('✅ WorldID service initialized');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.warn('⚠️ WorldID service not available:', errorMessage);
+      throw error;
+    }
+  }
+  return worldIdService;
+};
+
+const getBlockchainService = (): BlockchainService => {
+  if (!blockchainService) {
+    try {
+      blockchainService = new BlockchainService();
+      console.log('✅ Blockchain service initialized');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.warn('⚠️ Blockchain service not available:', errorMessage);
+      throw error;
+    }
+  }
+  return blockchainService;
+};
 
 // Validation schema - Updated for MiniKit payload structure
 const kycRequestSchema = Joi.object({
@@ -21,41 +67,15 @@ const kycRequestSchema = Joi.object({
   user_address: Joi.string().optional()
 });
 
-// Services
-let worldIdService: WorldIdService | null = null;
-let blockchainService: BlockchainService | null = null;
-
-// Initialize services only if configuration is available
-try {
-  worldIdService = new WorldIdService();
-  console.log('✅ WorldID service initialized');
-} catch (error) {
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-  console.warn('⚠️ WorldID service not available:', errorMessage);
-}
-
-try {
-  blockchainService = new BlockchainService();
-  console.log('✅ Blockchain service initialized');
-} catch (error) {
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-  console.warn('⚠️ Blockchain service not available:', errorMessage);
-}
-
 /**
  * POST /api/v1/kyc/worldid
  * Verify World ID proof and submit to smart contract
  */
 router.post('/worldid', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Check if services are available
-    if (!worldIdService || !blockchainService) {
-      res.status(500).json({
-        success: false,
-        error: 'Backend services not properly configured'
-      } as KYCResponse);
-      return;
-    }
+    // Initialize services lazily
+    const worldId = getWorldIdService();
+    const blockchain = getBlockchainService();
 
     // Validate request body
     const { error, value } = kycRequestSchema.validate(req.body);
@@ -70,7 +90,7 @@ router.post('/worldid', async (req: Request, res: Response, next: NextFunction):
     const requestData: WorldIdProofRequest = value;
 
     // Step 1: Verify World ID proof using MiniKit's verifyCloudProof
-    const verificationResponse = await worldIdService.verifyProof({
+    const verificationResponse = await worldId.verifyProof({
       payload: requestData.payload,
       action: requestData.action,
       signal: requestData.signal
@@ -85,7 +105,7 @@ router.post('/worldid', async (req: Request, res: Response, next: NextFunction):
     }
 
     // Step 2: Submit to smart contract using the verified payload
-    const contractResponse = await blockchainService.submitKYCToContract({
+    const contractResponse = await blockchain.submitKYCToContract({
       proof: requestData.payload.proof,
       merkle_root: requestData.payload.merkle_root,
       nullifier_hash: requestData.payload.nullifier_hash,
@@ -120,13 +140,8 @@ router.post('/worldid', async (req: Request, res: Response, next: NextFunction):
  */
 router.get('/status/:address', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    if (!blockchainService) {
-      res.status(500).json({
-        success: false,
-        error: 'Blockchain service not available'
-      });
-      return;
-    }
+    // Initialize blockchain service lazily
+    const blockchain = getBlockchainService();
 
     const { address } = req.params;
     
@@ -139,7 +154,7 @@ router.get('/status/:address', async (req: Request, res: Response, next: NextFun
       return;
     }
 
-    const status = await blockchainService.getKYCStatus(address);
+    const status = await blockchain.getKYCStatus(address);
     
     res.json({
       success: true,
@@ -152,6 +167,163 @@ router.get('/status/:address', async (req: Request, res: Response, next: NextFun
     console.error('Get KYC status error:', error);
     next(error);
   }
+});
+
+/**
+ * POST /api/v1/kyc/onfido/start
+ * Inicia el proceso KYC con Onfido creando applicant y generando SDK token
+ */
+router.post('/onfido/start', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { firstName, lastName, email, dob, address, userAddress } = req.body;
+
+    // Validación básica
+    if (!firstName || !lastName || !email || !userAddress) {
+      res.status(400).json({
+        success: false,
+        error: 'Missing required fields: firstName, lastName, email, userAddress'
+      });
+      return;
+    }
+
+    console.log('🚀 Starting Onfido KYC process for:', email);
+
+    // 1. Crear applicant en Onfido
+    const onfido = getOnfidoService();
+    const applicant = await onfido.createApplicant({
+      firstName,
+      lastName,
+      email,
+      dob,
+      address
+    });
+
+    // 2. Generar SDK token para el frontend
+    const sdkToken = await onfido.generateSDKToken(
+      applicant.id,
+      req.headers.origin
+    );
+
+    // 3. Crear check de verificación
+    const check = await onfido.createCheck(applicant.id, userAddress);
+
+    // Respuesta exitosa
+    res.json({
+      success: true,
+      data: {
+        applicantId: applicant.id,
+        sdkToken: sdkToken.token,
+        checkId: check.id,
+        status: check.status
+      }
+    });
+
+    console.log('✅ Onfido KYC process started successfully');
+
+  } catch (error) {
+    console.error('❌ Error starting Onfido KYC process:', error);
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/kyc/onfido/status/:checkId
+ * Obtiene el estado actual de un check de verificación Onfido
+ */
+router.get('/onfido/status/:checkId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { checkId } = req.params;
+
+    if (!checkId) {
+      res.status(400).json({
+        success: false,
+        error: 'Check ID is required'
+      });
+      return;
+    }
+
+    console.log('📋 Getting Onfido KYC status for check:', checkId);
+
+    const onfido = getOnfidoService();
+    const check = await onfido.getCheck(checkId);
+
+    res.json({
+      success: true,
+      data: {
+        checkId: check.id,
+        status: check.status,
+        result: check.result,
+        applicantId: check.applicantId,
+        reports: check.reports?.map(report => ({
+          id: report.id,
+          name: report.name,
+          status: report.status,
+          result: report.result
+        })),
+        createdAt: check.createdAt,
+        isComplete: check.status === 'complete',
+        isApproved: check.result === 'clear'
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting Onfido KYC status:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/kyc/onfido/webhook
+ * Endpoint para recibir webhooks de Onfido
+ */
+router.post('/onfido/webhook', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const signature = req.headers['x-onfido-signature'] as string;
+    const rawBody = JSON.stringify(req.body);
+
+    // Verificar signature del webhook (seguridad)
+    const onfido = getOnfidoService();
+    const isValidSignature = onfido.verifyWebhookSignature(rawBody, signature);
+    
+    if (!isValidSignature && process.env.NODE_ENV === 'production') {
+      console.warn('⚠️ Invalid webhook signature');
+      res.status(401).json({ error: 'Invalid signature' });
+      return;
+    }
+
+    console.log('📨 Received Onfido webhook:', req.body.payload?.action);
+
+    // Procesar el evento
+    await onfido.processWebhookEvent(req.body);
+
+    // Responder a Onfido que recibimos el webhook
+    res.status(200).json({ received: true });
+
+  } catch (error) {
+    console.error('❌ Error processing Onfido webhook:', error);
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/kyc/onfido/config
+ * Obtiene información de configuración del servicio Onfido
+ */
+router.get('/onfido/config', (req: Request, res: Response) => {
+  const onfido = getOnfidoService();
+  const serviceInfo = onfido.getServiceInfo();
+  
+  res.json({
+    success: true,
+    data: {
+      service: 'Onfido',
+      configured: serviceInfo.configured,
+      apiUrl: serviceInfo.apiUrl,
+      hasApiToken: serviceInfo.hasApiToken,
+      hasWebhookToken: serviceInfo.hasWebhookToken,
+      environment: process.env.NODE_ENV || 'development'
+    }
+  });
 });
 
 export { router as kycRoutes };
