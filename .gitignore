@@ -112,3 +112,5 @@ contracts/btt-examples/
 cre-cli.zip
 *_darwin_*.zip
 *_linux_*.tar.gz
+cre
+contracts/chainlink-cre/cre
