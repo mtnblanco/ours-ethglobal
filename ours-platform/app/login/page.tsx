@@ -1,11 +1,77 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React, { useState } from "react";
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowRight, Lock } from 'lucide-react'; // Assuming lucide-react for icons
 
 export default function LoginPage() {
+  const [verified, setVerified] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  async function handleVerify() {
+    setVerifying(true);
+    setVerifyError(null);
+    try {
+      const mod: any = await import("@worldcoin/minikit-js");
+      const MiniKit = mod.MiniKit ?? mod.default ?? mod;
+      if (!MiniKit) {
+        setVerifyError("MiniKit module unavailable");
+        setVerifying(false);
+        return;
+      }
+
+      // Ensure MiniKit is installed/initialized (this will return success:false for some error cases)
+      try {
+        if (typeof MiniKit.install === "function") {
+          const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID;
+          const installRes = await MiniKit.install(appId);
+          // installRes may be { success: true } or { success: false, errorCode, errorMessage }
+          if (installRes && installRes.success === false) {
+            // If already_installed it's fine, otherwise surface error
+            if (installRes.errorCode !== "already_installed") {
+              setVerifyError(
+                installRes.errorMessage || `MiniKit.install failed: ${installRes.errorCode}`
+              );
+              setVerifying(false);
+              return;
+            }
+          }
+        }
+      } catch (ie) {
+        // installation threw
+        setVerifyError(String(ie));
+        setVerifying(false);
+        return;
+      }
+
+      if (!MiniKit.commandsAsync || typeof MiniKit.commandsAsync.verify !== "function") {
+        setVerifyError("'verify' command is unavailable. Check MiniKit.install() or update the World App.");
+        setVerifying(false);
+        return;
+      }
+
+      // payload: action and signal. Here we use a simple action 'login' and derive a signal from location.
+      const signal = typeof window !== "undefined" ? window.location.href : "login";
+      const payload = { action: "login", signal };
+
+      const resp = await MiniKit.commandsAsync.verify(payload);
+      // resp.finalPayload contains the result from World App
+      if (resp?.finalPayload?.status === "success") {
+        setVerified(true);
+      } else {
+        console.warn("World ID verification failed or cancelled", resp);
+        setVerifyError("Verification failed or was cancelled");
+      }
+    } catch (err) {
+      console.error("Verification error:", err);
+      setVerifyError(String(err));
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   return (
     <div className="min-h-screen w-full bg-brand-dark flex overflow-hidden relative text-brand-light selection:bg-brand-primary selection:text-brand-dark">
 
@@ -53,6 +119,30 @@ export default function LoginPage() {
             <p className="text-brand-light/70 text-sm">Secure access to your real estate portfolio.</p>
           </div>
 
+          {/* Verification gate: require human proof before enabling login */}
+          <div className="mb-6 text-center">
+            {!verified ? (
+              <>
+                <p className="text-sm text-brand-light/70 mb-3">Please verify you are human with World App before signing in.</p>
+                <button
+                  onClick={handleVerify}
+                  disabled={verifying}
+                  className="inline-flex items-center gap-2 bg-brand-primary hover:bg-brand-accent text-brand-dark font-bold py-2 px-4 rounded-lg"
+                >
+                  {verifying ? "Verifying..." : "Verify with World App"}
+                </button>
+                {verifyError ? (
+                  <p className="mt-3 text-xs text-red-400">{verifyError}</p>
+                ) : null}
+              </>
+            ) : (
+              <div className="inline-flex items-center gap-3 justify-center">
+                <div className="w-3 h-3 rounded-full bg-emerald-400 shadow" />
+                <span className="text-sm font-semibold text-emerald-300">Human verified</span>
+              </div>
+            )}
+          </div>
+
           <form className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-brand-light/80 mb-2">
@@ -86,7 +176,8 @@ export default function LoginPage() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-accent text-brand-dark font-bold py-3 px-4 rounded-lg transition-colors duration-300"
+              className="w-full flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-accent text-brand-dark font-bold py-3 px-4 rounded-lg transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!verified}
             >
               <Lock className="w-4 h-4" />
               Sign in securely

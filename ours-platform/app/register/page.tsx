@@ -1,11 +1,22 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Wallet, Building2, ShieldCheck } from 'lucide-react';
+import { Wallet, Building2, ShieldCheck, CheckCircle } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 export default function RegisterPage() {
+  const searchParams = useSearchParams();
+  const [isKycInitiated, setIsKycInitiated] = useState(false);
+
+  useEffect(() => {
+    // Check if user came from World ID verification flow
+    const kycInitiated = searchParams.get('kyc_initiated');
+    if (kycInitiated === 'true') {
+      setIsKycInitiated(true);
+    }
+  }, [searchParams]);
   return (
     <div className="min-h-screen bg-brand-dark text-brand-light flex">
 
@@ -64,14 +75,29 @@ export default function RegisterPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-2xl font-bold mb-2 text-brand-light">Create your account</h2>
-            <p className="text-brand-light/70 text-sm mb-8">Step 1 of 2: Identity & Security</p>
+            <h2 className="text-2xl font-bold mb-2 text-brand-light">
+              {isKycInitiated ? "Complete your profile" : "Create your account"}
+            </h2>
+            <p className="text-brand-light/70 text-sm mb-8">
+              {isKycInitiated ? "Step 2 of 2: Complete registration with World ID verification" : "Step 1 of 2: Identity & Security"}
+            </p>
+
+            {/* World ID Verification Status */}
+            {isKycInitiated && (
+              <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <div>
+                  <p className="text-green-400 font-semibold text-sm">World ID Verified</p>
+                  <p className="text-green-400/70 text-xs">Human verification completed successfully</p>
+                </div>
+              </div>
+            )}
 
             {/* Progress Indicator */}
             <div className="w-full h-1 bg-brand-surface rounded-full mb-8 overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
-                animate={{ width: '50%' }}
+                animate={{ width: isKycInitiated ? '100%' : '50%' }}
                 transition={{ duration: 1, ease: "circOut" }}
                 className="h-full bg-brand-primary"
               />
