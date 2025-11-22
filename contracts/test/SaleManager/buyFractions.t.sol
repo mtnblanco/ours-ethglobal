@@ -108,9 +108,31 @@ contract BuyFractionsTest is BaseTest {
         _;
     }
     
+    /// @dev when the buyer does not have KYC verified
+    ///      └── it should revert with KYCNotVerified
+    function test_RevertWhen_TheBuyerDoesNotHaveKycVerified() external whenTheSaleIsActive {
+        // investor1 NO tiene KYC aprobado (setUp ya no aprueba por defecto)
+        uint256 totalCost = _calculateTotalCost(PURCHASE_AMOUNT);
+        _approveStablecoin(investor1, totalCost);
+        
+        vm.prank(investor1);
+        vm.expectRevert(SaleManager.KYCNotVerified.selector);
+        saleManager.buyFractions(address(propertyToken), PURCHASE_AMOUNT);
+    }
+    
+    /*//////////////////////////////////////////////////////////////
+                MODIFIER: BUYER HAS KYC
+    //////////////////////////////////////////////////////////////*/
+    
+    modifier whenTheBuyerHasKycVerified() {
+        // Aprobar KYC para investor1 (usado en la mayoría de tests)
+        _approveKYC(investor1);
+        _;
+    }
+    
     /// @dev when the amount is zero
     ///      └── it should revert with InvalidAmount
-    function test_RevertWhen_TheAmountIsZero() external whenTheSaleIsActive {
+    function test_RevertWhen_TheAmountIsZero() external whenTheSaleIsActive whenTheBuyerHasKycVerified {
         vm.prank(investor1);
         vm.expectRevert(SaleManager.InvalidAmount.selector);
         saleManager.buyFractions(address(propertyToken), 0);
@@ -118,9 +140,10 @@ contract BuyFractionsTest is BaseTest {
     
     /// @dev when the buyer has insufficient USDC balance
     ///      └── it should revert with InsufficientBalance
-    function test_RevertWhen_TheBuyerHasInsufficientUsdcBalance() external whenTheSaleIsActive {
+    function test_RevertWhen_TheBuyerHasInsufficientUsdcBalance() external whenTheSaleIsActive whenTheBuyerHasKycVerified {
         // Crear comprador sin balance
         address poorInvestor = makeAddr("poorInvestor");
+        _approveKYC(poorInvestor); // Pero con KYC
         
         vm.prank(poorInvestor);
         vm.expectRevert(SaleManager.InsufficientBalance.selector);
@@ -129,7 +152,7 @@ contract BuyFractionsTest is BaseTest {
     
     /// @dev when the buyer has sufficient balance but insufficient approval
     ///      └── it should revert with ERC20InsufficientAllowance
-    function test_RevertWhen_TheBuyerHasSufficientBalanceButInsufficientApproval() external whenTheSaleIsActive {
+    function test_RevertWhen_TheBuyerHasSufficientBalanceButInsufficientApproval() external whenTheSaleIsActive whenTheBuyerHasKycVerified {
         // investor1 tiene balance pero no approval
         vm.prank(investor1);
         vm.expectRevert(); // ERC20: insufficient allowance
@@ -141,6 +164,10 @@ contract BuyFractionsTest is BaseTest {
     //////////////////////////////////////////////////////////////*/
     
     modifier whenTheBuyerHasSufficientBalanceAndApproval() {
+        // Aprobar KYC para todos los inversores (necesario para buyFractions)
+        _approveKYC(investor1);
+        _approveKYC(investor2);
+        _approveKYC(investor3);
         _;
     }
     

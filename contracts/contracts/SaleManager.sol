@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../lib/ERC3643/contracts/token/IToken.sol";
 import "./PropertyRegistry.sol";
+import "./ChainlinkKYCIssuer.sol";
 
 /**
  * @title SaleManager
@@ -43,6 +44,9 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Registro de propiedades tokenizadas
     PropertyRegistry public propertyRegistry;
+    
+    /// @notice Sistema de KYC con World ID + Chainlink + Onfido
+    ChainlinkKYCIssuer public kycIssuer;
 
     /// @notice Comisión de la plataforma en basis points (100 = 1%)
     uint256 public platformFeeBps;
@@ -213,6 +217,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
     error InsufficientBalance();
     error PropertyNotRegistered();
     error PropertyNotAvailable();
+    error KYCNotVerified();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -250,14 +255,17 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
     constructor(
         address _stablecoin, 
         address _propertyRegistry,
+        address _kycIssuer,
         uint256 _platformFeeBps
     ) {
         if (_stablecoin == address(0)) revert InvalidStablecoin();
         if (_propertyRegistry == address(0)) revert InvalidRegistry();
+        if (_kycIssuer == address(0)) revert InvalidRegistry();
         if (_platformFeeBps > MAX_PLATFORM_FEE_BPS) revert InvalidFee();
 
         stablecoin = IERC20(_stablecoin);
         propertyRegistry = PropertyRegistry(_propertyRegistry);
+        kycIssuer = ChainlinkKYCIssuer(_kycIssuer);
         platformFeeBps = _platformFeeBps;
 
         // El deployer recibe el rol de admin por defecto
@@ -502,6 +510,16 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         saleActive(token)
     {
         // ========== CHECK ==========
+        
+        // 1. Verificar KYC (CRÍTICO para cumplimiento regulatorio)
+        // POR QUÉ PRIMERO:
+        // - Más importante que amount o balance
+        // - Sin KYC → no puede invertir (regulación)
+        // - Falla rápido si no tiene KYC (ahorra gas)
+        if (!kycIssuer.isKYCVerified(msg.sender)) {
+            revert KYCNotVerified();
+        }
+        
         if (amount == 0) revert InvalidAmount();
 
         Sale storage sale = sales[token];
