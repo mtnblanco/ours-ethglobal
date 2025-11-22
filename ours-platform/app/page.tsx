@@ -1,486 +1,376 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { 
-  motion, 
-  useScroll, 
-  useTransform, 
-  useSpring, 
-  useInView, 
-  AnimatePresence 
-} from 'framer-motion';
-import { 
-  ArrowRight, Shield, PieChart, Building, 
-  Lock, FileText, CheckCircle, RefreshCw, 
-  Globe, Server, Activity, Box, Layers 
+  ArrowRight, 
+  Shield, 
+  PieChart, 
+  Building, 
+  Lock, 
+  FileText, 
+  CheckCircle, 
+  RefreshCw, 
+  Globe, 
+  Server 
 } from 'lucide-react';
 import Link from 'next/link';
 
-// --- Utility Components for Visual Effects ---
-
-// 1. Architectural Background Grid
-const ArchitecturalGrid = () => {
-  return (
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-      {/* Moving Grid Plane */}
-      <div className="absolute inset-0 [perspective:1000px]">
-        <motion.div
-          animate={{ rotateX: [0, 0], translateY: [0, -50] }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-0 bg-[linear-gradient(to_right,#0ea5e910_1px,transparent_1px),linear-gradient(to_bottom,#0ea5e910_1px,transparent_1px)] bg-[size:4rem_4rem] [transform:rotateX(60deg)] origin-top"
-        />
-      </div>
-      {/* Ambient Glows */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-primary/20 rounded-full blur-[128px] opacity-40" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[128px] opacity-40" />
-    </div>
-  );
+// --- Animation Variants ---
+const fadeIn = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
 };
 
-// 2. Glowing "Scanner" Line for the Building Card
-const ScannerLine = () => (
-  <motion.div 
-    animate={{ top: ['0%', '100%', '0%'] }}
-    transition={{ duration: 4, ease: "easeInOut", repeat: Infinity }}
-    className="absolute left-0 w-full h-[2px] bg-brand-primary shadow-[0_0_20px_2px_rgba(14,165,233,0.8)] z-20"
-  />
-);
-
-// 3. Floating Particles
-const FloatingParticles = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    {[...Array(5)].map((_, i) => (
-      <motion.div
-        key={i}
-        className="absolute w-1 h-1 bg-brand-primary rounded-full"
-        initial={{ x: Math.random() * 100 + "%", y: Math.random() * 100 + "%", opacity: 0 }}
-        animate={{ 
-          y: [null, Math.random() * -100],
-          opacity: [0, 0.8, 0] 
-        }}
-        transition={{ 
-          duration: Math.random() * 10 + 10, 
-          repeat: Infinity, 
-          delay: Math.random() * 5 
-        }}
-      />
-    ))}
-  </div>
-);
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.2 } }
+};
 
 export default function LandingPage() {
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
-
   return (
-    <main className="min-h-screen bg-[#050b14] text-slate-200 font-sans selection:bg-brand-primary/30 selection:text-white overflow-x-hidden">
+    <main className="min-h-screen bg-brand-dark text-brand-light font-sans selection:bg-brand-primary selection:text-brand-dark overflow-x-hidden">
       
-      {/* Scroll Progress Bar */}
-      <motion.div
-        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-primary to-purple-500 origin-left z-[100]"
-        style={{ scaleX }}
-      />
-
       {/* --- Navigation --- */}
-      <nav className="fixed top-0 w-full z-50 bg-[#050b14]/80 backdrop-blur-xl border-b border-white/5">
+      <nav className="fixed top-0 w-full z-50 bg-brand-dark/90 backdrop-blur-md border-b border-brand-primary/20">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <motion.div 
-              whileHover={{ rotate: 90 }}
-              transition={{ duration: 0.5 }}
-            >
-              <img src="/logo.svg" alt="Ours Logo" className="h-8 w-auto" />
-            </motion.div>
-            <span className="font-bold text-xl tracking-tight text-white group-hover:text-brand-primary transition-colors">ours</span>
+          <Link href="/" className="flex items-center gap-3">
+            <img src="/logo.svg" alt="Ours Logo" className="h-8 w-auto" />
+            <span className="font-bold text-xl tracking-tight">ours</span>
           </Link>
-          <div className="hidden md:flex gap-8 text-sm font-medium text-slate-400">
-            {['Core', 'Standards', 'Legal', 'Process'].map((item) => (
-              <Link key={item} href={`#${item.toLowerCase()}`} className="hover:text-brand-primary hover:shadow-[0_1px_0_0_currentColor] transition-all pb-1">
-                {item}
-              </Link>
-            ))}
+          <div className="hidden md:flex gap-8 text-sm font-medium text-brand-light/80">
+            <Link href="#functionality" className="hover:text-brand-primary transition-colors">Core</Link>
+            <Link href="#standards" className="hover:text-brand-primary transition-colors">Standards</Link>
+            <Link href="#legal" className="hover:text-brand-primary transition-colors">Legal</Link>
+            <Link href="#lifecycle" className="hover:text-brand-primary transition-colors">Process</Link>
           </div>
           <div className="flex gap-4">
-            <Link href="/login" className="hidden sm:block text-sm font-medium text-slate-300 hover:text-white py-2 px-4 transition-colors">Log in</Link>
-            <Link href="/register" className="relative group overflow-hidden rounded-full p-[1px]">
-              <span className="absolute inset-0 bg-gradient-to-r from-brand-primary to-purple-600 rounded-full opacity-70 group-hover:opacity-100 transition-opacity" />
-              <div className="relative bg-[#050b14] text-white text-sm font-bold py-2 px-6 rounded-full group-hover:bg-opacity-90 transition-all flex items-center gap-2">
-                Get Started <ArrowRight className="w-3 h-3" />
-              </div>
+            <Link href="/login" className="hidden sm:block text-sm font-medium text-brand-light hover:text-brand-primary py-2 px-4 transition-colors">Log in</Link>
+            <Link href="/register" className="text-sm font-bold bg-brand-primary text-brand-dark py-2 px-5 rounded-full hover:bg-brand-accent transition-all shadow-lg shadow-brand-primary/20">
+              Get Started
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* --- Hero Section --- */}
-      <section className="relative min-h-screen flex items-center pt-28 pb-20 overflow-hidden">
-        <ArchitecturalGrid />
-        <FloatingParticles />
+      {/* --- Hero Section (Unchanged visually, tailored text) --- */}
+      <section className="relative min-h-screen flex items-center pt-20 pb-12 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.08),transparent_70%)]" />
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-brand-dark to-transparent" />
+        </div>
 
         <div className="max-w-7xl mx-auto px-6 relative z-10 grid lg:grid-cols-2 gap-12 items-center">
-          <motion.div 
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-brand-primary/30 bg-brand-primary/10 text-brand-primary text-xs font-bold tracking-widest uppercase mb-6"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-primary"></span>
-              </span>
+          <motion.div initial="hidden" animate="visible" variants={fadeIn}>
+            <div className="inline-block px-3 py-1 rounded-full border border-brand-primary/20 bg-brand-primary/5 text-brand-primary text-xs font-bold tracking-widest uppercase mb-6">
               Regulated RWA Platform
-            </motion.div>
-            
-            <h1 className="text-5xl lg:text-7xl font-bold leading-tight mb-6 tracking-tight text-white">
-              Liquidity for <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary via-cyan-400 to-purple-500">
-                Tangible Assets
+            </div>
+            <h1 className="text-5xl lg:text-6xl font-bold leading-tight mb-6 tracking-tight text-brand-light">
+              Real Estate <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-brand-light">
+                Tokenization Infrastructure
               </span>
             </h1>
-            
-            <p className="text-lg text-slate-400 mb-8 max-w-lg leading-relaxed border-l-2 border-brand-primary/20 pl-6">
+            <p className="text-lg text-brand-light/70 mb-8 max-w-lg leading-relaxed">
               ours is a Web3 platform enabling fractional investment in real properties via compliant security tokens. Fully regulated, transparent, and liquid.
             </p>
-            
             <div className="flex flex-col sm:flex-row gap-4">
-              <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex justify-center items-center gap-2 bg-brand-primary text-[#050b14] px-8 py-4 rounded-lg font-bold hover:bg-brand-accent hover:shadow-[0_0_20px_rgba(14,165,233,0.4)] transition-all"
-              >
+              <Link href="/register" className="group flex justify-center items-center gap-2 bg-brand-light text-brand-dark px-8 py-4 rounded-lg font-bold hover:bg-brand-primary hover:text-brand-dark transition-colors">
                 Start Investing
-                <ArrowRight className="w-4 h-4" />
-              </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.02, borderColor: "rgba(255,255,255,0.5)" }}
-                whileTap={{ scale: 0.98 }}
-                className="flex justify-center items-center gap-2 px-8 py-4 rounded-lg font-bold text-white border border-white/10 hover:bg-white/5 transition-all"
-              >
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link href="#standards" className="flex justify-center items-center gap-2 px-8 py-4 rounded-lg font-bold text-brand-light border border-brand-primary/30 hover:bg-brand-primary/10 transition-colors">
                 Technical Specs
-              </motion.button>
+              </Link>
             </div>
           </motion.div>
 
-          {/* Hero Visual: The Holographic Card */}
-          <div className="relative h-[500px] w-full flex items-center justify-center perspective-[1000px]">
-            <motion.div 
-              initial={{ rotateY: -15, rotateX: 5, opacity: 0 }}
-              animate={{ rotateY: -5, rotateX: 2, opacity: 1 }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-              className="relative w-80 h-[450px] bg-[#0a1525]/90 backdrop-blur-md border border-brand-primary/30 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(14,165,233,0.1)] z-20 group"
-            >
-              {/* Scanner Effect */}
-              <ScannerLine />
-              
-              {/* Card Content */}
-              <div className="h-1/2 relative bg-gradient-to-b from-[#0f233a] to-[#0a1525] flex items-center justify-center border-b border-brand-primary/20 overflow-hidden">
-                {/* Grid Overlay inside image */}
-                <div className="absolute inset-0 bg-[linear-gradient(transparent_2px,#0a1525_2px),linear-gradient(90deg,transparent_2px,#0a1525_2px)] bg-[size:20px_20px] opacity-20" />
-                <Building className="w-20 h-20 text-brand-primary drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]" />
-                
-                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center">
-                  <div className="bg-[#050b14]/80 backdrop-blur px-3 py-1 rounded border border-brand-primary/20 text-[10px] text-brand-primary font-mono">
-                    PALERMO-TOWER-01
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] text-green-400 font-mono bg-green-900/20 px-2 py-1 rounded border border-green-500/20">
-                    <Activity className="w-3 h-3" /> LIVE
-                  </div>
+          {/* Hero Visual */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="relative h-[500px] w-full flex items-center justify-center"
+          >
+             <div className="relative w-80 h-[420px] bg-brand-navy border border-brand-primary/30 rounded-2xl overflow-hidden shadow-2xl shadow-brand-primary/10 z-20">
+              <div className="h-1/2 bg-brand-dark/60 relative flex items-center justify-center border-b border-brand-primary/10">
+                <Building className="w-16 h-16 text-brand-primary/40" />
+                <div className="absolute bottom-4 left-6 bg-brand-dark/80 px-3 py-1 rounded text-xs text-brand-primary border border-brand-primary/20">
+                  PALERMO-TOWER-01
                 </div>
               </div>
-
-              <div className="p-6 space-y-5">
-                <div className="space-y-1">
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Standard</div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-white font-mono text-sm">ERC-3643 (T-REX)</div>
-                    <Shield className="w-4 h-4 text-brand-primary" />
-                  </div>
-                  {/* Progress Bar simulation */}
-                  <div className="w-full h-1 bg-slate-800 rounded-full mt-2 overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: "100%" }}
-                      transition={{ duration: 2, delay: 1 }}
-                      className="h-full bg-brand-primary"
-                    />
-                  </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <div className="text-xs text-brand-light/50 uppercase">Token Standard</div>
+                  <div className="text-brand-light font-mono">ERC-3643 (T-REX)</div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="flex justify-between">
                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">Supply</div>
-                      <div className="text-white font-mono text-lg">5,000</div>
+                      <div className="text-xs text-brand-light/50 uppercase">Supply</div>
+                      <div className="text-brand-light font-mono">5,000 PT01</div>
                    </div>
                    <div className="text-right">
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">APY</div>
-                      <div className="text-green-400 font-mono text-lg font-bold">12.4%</div>
+                      <div className="text-xs text-brand-light/50 uppercase">Unit Price</div>
+                      <div className="text-brand-primary font-bold">20 USDC</div>
                    </div>
                 </div>
+                <div className="pt-2 border-t border-brand-primary/20 flex items-center gap-2 text-xs text-brand-light/60">
+                  <CheckCircle className="w-3 h-3 text-green-500" /> KYC Verified
+                </div>
               </div>
-            </motion.div>
-
-            {/* Floating Elements Behind */}
-            <motion.div 
-              animate={{ y: [-10, 10, -10], rotate: [0, 5, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -right-10 top-20 bg-[#0f233a] p-4 rounded-xl border border-brand-primary/20 shadow-xl z-10"
-            >
-              <PieChart className="w-8 h-8 text-purple-400" />
-            </motion.div>
-            <motion.div 
-              animate={{ y: [10, -10, 10], rotate: [0, -5, 0] }}
-              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-              className="absolute -left-10 bottom-32 bg-[#0f233a] p-4 rounded-xl border border-brand-primary/20 shadow-xl z-30"
-            >
-              <Lock className="w-8 h-8 text-cyan-400" />
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* --- Core Functionality --- */}
-      <section id="core" className="py-24 bg-[#08101c] relative">
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
+      <section id="functionality" className="py-20 bg-brand-navy/50">
+        <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <motion.div 
-               initial={{ opacity: 0, x: -20 }}
-               whileInView={{ opacity: 1, x: 0 }}
-               viewport={{ once: true }}
-               transition={{ duration: 0.6 }}
+               initial="hidden" 
+               whileInView="visible" 
+               viewport={{ once: true }} 
+               variants={staggerContainer}
             >
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">Core Functionality</h2>
-              <p className="text-slate-400 mb-8 leading-relaxed text-lg">
-                Verified developers onboard projects and define token supplies. Investors gain <span className="text-white font-semibold">fractional economic rights</span> recorded immutably on-chain.
+              <h2 className="text-3xl font-bold mb-6 text-brand-light">Core Functionality</h2>
+              <p className="text-brand-light/70 mb-8 leading-relaxed">
+                On <span className="font-bold text-brand-primary">ours</span>, verified real-estate developers can onboard projects, define token supply, and raise capital through regulated standards. 
+                For users, ownership is recorded on-chain, ensuring transparency, immutability, and legally enforceable rights.
               </p>
               
               <div className="space-y-6">
-                {[
-                    { icon: <Globe className="w-5 h-5" />, title: "Accessible Marketplace", desc: "Global access via compliant wallet connection." },
-                    { icon: <RefreshCw className="w-5 h-5" />, title: "Secondary Liquidity", desc: "Controlled exit mechanisms via KYC-gated pools." }
-                ].map((item, i) => (
-                    <motion.div 
-                        key={i}
-                        whileHover={{ x: 10 }}
-                        className="flex gap-4 group cursor-default"
-                    >
-                        <div className="mt-1 w-12 h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 text-brand-primary group-hover:bg-brand-primary group-hover:text-[#050b14] transition-colors duration-300">
-                            {item.icon}
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-white text-lg">{item.title}</h3>
-                            <p className="text-sm text-slate-500 mt-1 group-hover:text-slate-300 transition-colors">{item.desc}</p>
-                        </div>
-                    </motion.div>
-                ))}
+                <div className="flex gap-4">
+                  <div className="mt-1 w-10 h-10 bg-brand-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 text-brand-primary"><Globe className="w-5 h-5" /></div>
+                  <div>
+                    <h3 className="font-bold text-brand-light">Accessible Marketplace</h3>
+                    <p className="text-sm text-brand-light/60 mt-1">Investors complete KYC, connect a wallet, and purchase fractional tokens representing economic rights.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                   <div className="mt-1 w-10 h-10 bg-brand-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 text-brand-primary"><RefreshCw className="w-5 h-5" /></div>
+                  <div>
+                    <h3 className="font-bold text-brand-light">Secondary Liquidity</h3>
+                    <p className="text-sm text-brand-light/60 mt-1">Controlled secondary market allows exit during the 12–24 month development cycle, strictly between KYC-verified wallets.</p>
+                  </div>
+                </div>
               </div>
             </motion.div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {[
-                    { role: "Developer", items: ["Upload Legal Docs", "Define Supply", "Oracle Updates", "Yield Distro"], color: "border-brand-primary/30" },
-                    { role: "Investor", items: ["KYC/KYB Check", "Buy Fragments", "Track Progress", "Receive Yield"], color: "border-purple-500/30" }
-                ].map((card, idx) => (
-                    <motion.div 
-                        key={idx}
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: idx * 0.2 }}
-                        whileHover={{ y: -5 }}
-                        className={`bg-[#0b1729] p-8 rounded-2xl border ${card.color} hover:border-opacity-100 hover:bg-[#0f2038] transition-all duration-300 shadow-lg`}
-                    >
-                        <h4 className="text-white font-bold text-xl mb-4 flex items-center gap-2">
-                            {idx === 0 ? <Layers className="w-5 h-5 text-brand-primary"/> : <Box className="w-5 h-5 text-purple-500"/>}
-                            {card.role}
-                        </h4>
-                        <ul className="space-y-3">
-                            {card.items.map((li, i) => (
-                                <li key={i} className="flex items-center gap-2 text-sm text-slate-400">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-600" /> {li}
-                                </li>
-                            ))}
-                        </ul>
-                    </motion.div>
-                ))}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-brand-dark p-6 rounded-xl border border-brand-primary/20">
+                    <h4 className="text-brand-primary font-bold mb-2">Developer</h4>
+                    <ul className="text-xs text-brand-light/60 space-y-2">
+                        <li>• Upload Legal Docs</li>
+                        <li>• Define Token Supply</li>
+                        <li>• Push Oracle Updates</li>
+                        <li>• Distribute Yield</li>
+                    </ul>
+                </div>
+                <div className="bg-brand-dark p-6 rounded-xl border border-brand-primary/20 mt-8">
+                    <h4 className="text-brand-primary font-bold mb-2">Investor</h4>
+                    <ul className="text-xs text-brand-light/60 space-y-2">
+                        <li>• Complete KYC/KYB</li>
+                        <li>• Buy Fractional Tokens</li>
+                        <li>• Track Progress</li>
+                        <li>• Receive Dividends</li>
+                    </ul>
+                </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* --- Regulated Standards --- */}
-      <section id="standards" className="py-24 bg-[#050b14] relative overflow-hidden">
-        {/* Abstract Background Shapes */}
-        <div className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-b from-brand-primary/5 to-transparent opacity-50" />
-        
+      {/* --- Regulated Standards (Technical) --- */}
+      <section id="standards" className="py-24 bg-brand-dark relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-1/3 h-full bg-brand-primary/5 blur-3xl" />
         <div className="max-w-7xl mx-auto px-6 relative">
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial="hidden"
+            whileInView="visible"
             viewport={{ once: true }}
+            variants={fadeIn}
             className="text-center mb-16"
           >
-            <div className="text-brand-primary text-xs font-bold uppercase tracking-[0.2em] mb-3">Infrastructure</div>
-            <h2 className="text-3xl md:text-5xl font-bold mb-4 text-white">Security Standards</h2>
-            <p className="text-slate-400 max-w-2xl mx-auto">
-              Leveraging institutional-grade ERC frameworks used by major European banks.
+            <div className="text-brand-primary text-sm font-bold uppercase tracking-widest mb-3">Infrastructure</div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-brand-light">Regulated Tokenization Standards</h2>
+            <p className="text-brand-light/70 max-w-2xl mx-auto">
+              We use institutional-grade frameworks widely adopted by European RWA providers.
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-8">
-            {/* ERC 1400 Card */}
-            <motion.div 
-                whileHover={{ scale: 1.01 }}
-                className="group relative p-8 rounded-2xl bg-[#08101c] border border-white/5 overflow-hidden"
-            >
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative z-10">
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 rounded-lg bg-slate-800 text-slate-200"><Server className="w-6 h-6" /></div>
-                        <h3 className="text-2xl font-bold text-white">ERC-1400</h3>
-                    </div>
-                    <ul className="space-y-4">
-                        {['Transfer restrictions (KYC/KYB)', 'Partitioned tokens (Tranches)', 'Permissioned minting/burning'].map((item, i) => (
-                            <li key={i} className="flex items-start gap-3 text-sm text-slate-400 group-hover:text-slate-200 transition-colors">
-                                <CheckCircle className="w-5 h-5 text-slate-600 group-hover:text-brand-primary transition-colors" /> 
-                                {item}
-                            </li>
-                        ))}
-                    </ul>
+            {/* ERC 1400 */}
+            <div className="p-8 rounded-2xl border border-brand-light/10 bg-brand-light/5 hover:border-brand-primary/40 transition-colors">
+                <div className="flex items-center gap-3 mb-4">
+                    <Server className="w-6 h-6 text-brand-primary" />
+                    <h3 className="text-xl font-bold text-brand-light">ERC-1400</h3>
                 </div>
-            </motion.div>
+                <p className="text-sm text-brand-light/60 mb-6 h-10">The institutional standard for regulated RWAs used in real estate, bonds, and equity.</p>
+                <ul className="space-y-3">
+                    {['Transfer restrictions (KYC/KYB)', 'Partitioned tokens (tranches)', 'Modular compliance framework', 'Permissioned minting/burning'].map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-brand-light/80">
+                            <CheckCircle className="w-4 h-4 text-brand-primary mt-0.5" /> {item}
+                        </li>
+                    ))}
+                </ul>
+            </div>
 
-            {/* ERC 3643 Card (Highlighted) */}
-            <motion.div 
-                whileHover={{ scale: 1.02 }}
-                className="group relative p-1 rounded-2xl bg-gradient-to-br from-brand-primary via-purple-500 to-brand-primary bg-[length:200%_200%] animate-gradient-xy"
-            >
-                <div className="h-full bg-[#0b1729] rounded-xl p-8 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 px-4 py-1 bg-brand-primary text-[#050b14] text-[10px] font-bold rounded-bl-xl">PREFERRED STANDARD</div>
-                    
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 rounded-lg bg-brand-primary/20 text-brand-primary"><Shield className="w-6 h-6" /></div>
-                        <h3 className="text-2xl font-bold text-white">ERC-3643 (T-REX)</h3>
-                    </div>
-                    <ul className="space-y-4">
-                        {['IdentityRegistry Whitelisting', 'Automated On-Chain Compliance', 'Recovery Mechanisms'].map((item, i) => (
-                            <li key={i} className="flex items-start gap-3 text-sm text-slate-300">
-                                <CheckCircle className="w-5 h-5 text-brand-primary" /> 
-                                {item}
-                            </li>
-                        ))}
-                    </ul>
+            {/* ERC 3643 */}
+            <div className="p-8 rounded-2xl border border-brand-primary/50 bg-brand-navy shadow-lg shadow-brand-primary/10 relative">
+                <div className="absolute top-4 right-4 bg-brand-primary text-brand-dark text-[10px] font-bold px-2 py-1 rounded">PRIMARY STANDARD</div>
+                <div className="flex items-center gap-3 mb-4">
+                    <Shield className="w-6 h-6 text-brand-primary" />
+                    <h3 className="text-xl font-bold text-brand-light">ERC-3643 (T-REX)</h3>
                 </div>
-            </motion.div>
+                <p className="text-sm text-brand-light/60 mb-6 h-10">The modern evolution offering continuous automated compliance and identity-based control.</p>
+                <ul className="space-y-3">
+                    {['IdentityRegistry for whitelisted wallets', 'Continuous automated compliance', 'Enterprise-grade permission layers', 'Enforced On-Chain Rules'].map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-brand-light/80">
+                            <CheckCircle className="w-4 h-4 text-brand-primary mt-0.5" /> {item}
+                        </li>
+                    ))}
+                </ul>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* --- Lifecycle Timeline (Animated) --- */}
-      <section id="process" className="py-24 bg-[#08101c] relative">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-white">Asset Lifecycle</h2>
-            <p className="text-slate-500">Regulated journey from onboarding to exit.</p>
+      {/* --- Legal & Transparency Grid --- */}
+      <section id="legal" className="py-24 bg-brand-navy border-y border-brand-primary/10">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="mb-16">
+            <h2 className="text-3xl font-bold mb-4 text-brand-light">Legal Model & Transparency</h2>
+            <p className="text-brand-light/70 max-w-3xl">
+              Fractional real estate implies an expectation of profit based on third-party efforts. 
+              Therefore, our tokens are legally structured as securities to ensure enforceability.
+            </p>
           </div>
 
-          {/* Timeline Component */}
-          <div className="relative space-y-12">
-            {/* The Vertical Line */}
-            <div className="absolute left-[19px] top-2 bottom-0 w-[2px] bg-slate-800" />
-            <motion.div 
-              style={{ scaleY: scrollYProgress }} 
-              className="absolute left-[19px] top-2 bottom-0 w-[2px] bg-brand-primary origin-top z-0" 
-            />
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Legal Structure */}
+            <div className="col-span-1 md:col-span-2 bg-brand-dark/50 p-8 rounded-2xl border border-brand-primary/20">
+                <h3 className="text-xl font-bold text-brand-light mb-6 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-brand-primary" /> Ownership Structures
+                </h3>
+                <div className="grid md:grid-cols-3 gap-6">
+                    <div>
+                        <h4 className="text-brand-light font-bold mb-2">A. Trust</h4>
+                        <p className="text-xs text-brand-light/60">Property title held by a Trust (Fideicomiso). Token holders are beneficiaries.</p>
+                    </div>
+                    <div>
+                        <h4 className="text-brand-light font-bold mb-2">B. SPV</h4>
+                        <p className="text-xs text-brand-light/60">A dedicated Special Purpose Vehicle company owns the asset. Tokens represent equity.</p>
+                    </div>
+                    <div>
+                        <h4 className="text-brand-light font-bold mb-2">C. Contractual</h4>
+                        <p className="text-xs text-brand-light/60">Tokens represent the right to receive yield returns rather than direct ownership.</p>
+                    </div>
+                </div>
+            </div>
 
+            {/* Valuation */}
+            <div className="bg-brand-dark/50 p-8 rounded-2xl border border-brand-primary/20">
+                <h3 className="text-xl font-bold text-brand-light mb-4 flex items-center gap-2">
+                    <PieChart className="w-5 h-5 text-brand-primary" /> Fair Value
+                </h3>
+                <p className="text-sm text-brand-light/60 mb-4">To prevent artificial inflation, listing requires:</p>
+                <ul className="space-y-2 text-sm text-brand-light/80">
+                    <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-brand-primary" /> Independent Valuation Committee</li>
+                    <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-brand-primary" /> Licensed Appraisers</li>
+                    <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-brand-primary" /> Min. 2 valuations per asset</li>
+                </ul>
+            </div>
+
+             {/* Transparency */}
+             <div className="col-span-1 md:col-span-3 bg-brand-primary/5 p-8 rounded-2xl border border-brand-primary/10 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div>
+                    <h3 className="text-lg font-bold text-brand-light mb-2">Asset Transparency & Verification</h3>
+                    <p className="text-sm text-brand-light/70">
+                        Developers must provide verifiable updates via off-chain oracles, real cost documentation, and independent audits.
+                    </p>
+                </div>
+                <div className="flex gap-4">
+                    <div className="px-4 py-2 bg-brand-dark rounded border border-brand-primary/30 text-xs font-mono text-brand-primary">Oracle Feeds</div>
+                    <div className="px-4 py-2 bg-brand-dark rounded border border-brand-primary/30 text-xs font-mono text-brand-primary">On-Chain Audit</div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- Lifecycle / How it works --- */}
+      <section id="lifecycle" className="py-24 bg-brand-dark">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-brand-light">Asset Lifecycle</h2>
+            <p className="text-brand-light/60">From onboarding to exit.</p>
+          </div>
+
+          <div className="relative border-l border-brand-primary/20 ml-4 md:ml-0 space-y-12">
             {[
-              { title: 'Onboarding & Legal', desc: 'Developer uploads property; Trust/SPV structure is established.' },
-              { title: 'Token Deployment', desc: 'ERC-3643 contract deployed (IdentityRegistry linked).' },
-              { title: 'Primary Sale', desc: 'Investors whitelist via KYC and purchase fractional tokens.' },
-              { title: 'Development Phase', desc: 'Oracles push construction milestones on-chain.' },
-              { title: 'Exit & Distribution', desc: 'Asset sold; Smart Contract distributes capital + yield.' },
+              { title: 'Onboarding', desc: 'Developer uploads property and submits legal/financial documentation.' },
+              { title: 'Legal Structure', desc: 'ours sets up the Trust or SPV to hold the asset.' },
+              { title: 'Token Deployment', desc: 'New ERC-3643 contract deployed (e.g., PT01, Supply: 5,000).' },
+              { title: 'Primary Sale', desc: 'Investors complete KYC, whitelist wallet, and buy tokens.' },
+              { title: 'Development', desc: 'Developer posts milestones; Oracles push progress data on-chain.' },
+              { title: 'Completion & Sale', desc: 'Property is completed and sold on the open market.' },
+              { title: 'Distribution', desc: 'Funds are distributed proportionally to token holders via smart contract.' },
             ].map((step, index) => (
-              <TimelineItem key={index} step={step} index={index} />
+              <div key={index} className="relative pl-8 md:pl-12">
+                <div className="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-brand-primary shadow-[0_0_10px_rgba(14,165,233,0.5)]" />
+                <h3 className="text-xl font-bold text-brand-light mb-1">
+                  <span className="text-brand-primary mr-2">0{index + 1}.</span>{step.title}
+                </h3>
+                <p className="text-brand-light/60 text-sm">{step.desc}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* --- Footer --- */}
-      <footer className="bg-[#050b14] border-t border-white/10 py-16">
-        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12">
+      <footer className="bg-brand-navy border-t border-brand-primary/20 py-12">
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8">
           <div>
-            <div className="flex items-center gap-3 mb-6">
-              <img src="/logo.svg" alt="Ours Logo" className="h-8 w-auto opacity-80" />
-              <span className="font-bold text-xl text-white">ours</span>
-            </div>
-            <p className="text-slate-500 text-sm leading-relaxed">
-              The bridge between tangible real estate and digital liquidity. Institutional grade.
+            <Link href="/" className="flex items-center gap-3 mb-4">
+              <img src="/logo.svg" alt="Ours Logo" className="h-7 w-auto" />
+              <span className="font-bold text-lg text-brand-light">ours</span>
+            </Link>
+            <p className="text-brand-light/60 text-sm mb-4">
+              Bridging real estate and blockchain in a secure, institutional-grade environment.
             </p>
+            <div className="text-xs text-brand-light/40">
+                Contract: 0x...3643
+            </div>
           </div>
-          
-          {[
-            { head: "Platform", links: ["Marketplace", "Security", "Technology"] },
-            { head: "Legal", links: ["Terms", "Privacy", "Risk Disclosure"] }
-          ].map((col, idx) => (
-             <div key={idx}>
-                <h4 className="font-bold text-white mb-6">{col.head}</h4>
-                <ul className="space-y-3 text-sm text-slate-500">
-                    {col.links.map(l => <li key={l}><a href="#" className="hover:text-brand-primary transition-colors">{l}</a></li>)}
-                </ul>
-             </div>
-          ))}
-
           <div>
-            <h4 className="font-bold text-white mb-6">Updates</h4>
+            <h4 className="font-bold mb-4 text-brand-light">Platform</h4>
+            <ul className="space-y-2 text-sm text-brand-light/70">
+              <li><Link href="#" className="hover:text-brand-primary">Marketplace</Link></li>
+              <li><Link href="#standards" className="hover:text-brand-primary">Security Standards</Link></li>
+              <li><Link href="#lifecycle" className="hover:text-brand-primary">How it Works</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-bold mb-4 text-brand-light">Legal</h4>
+            <ul className="space-y-2 text-sm text-brand-light/70">
+              <li><Link href="#" className="hover:text-brand-primary">Risk Disclosure</Link></li>
+              <li><Link href="#" className="hover:text-brand-primary">Terms of Service</Link></li>
+              <li><Link href="#" className="hover:text-brand-primary">Privacy Policy</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-bold mb-4 text-brand-light">Newsletter</h4>
             <div className="flex gap-2">
-              <input type="email" placeholder="Enter email" className="bg-[#0b1729] border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-brand-primary text-white placeholder:text-slate-600 transition-colors" />
-              <button className="bg-brand-primary text-[#050b14] px-4 py-2 rounded-lg text-sm font-bold hover:bg-brand-accent transition-colors">Join</button>
+              <input type="email" placeholder="Email" className="bg-brand-dark border border-brand-primary/30 rounded px-3 py-2 text-sm w-full focus:outline-none focus:border-brand-primary text-brand-light placeholder:text-brand-light/50" />
+              <button className="bg-brand-primary text-brand-dark px-3 py-2 rounded text-sm font-bold hover:bg-brand-accent">Go</button>
             </div>
           </div>
         </div>
+        <div className="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-brand-primary/20 text-center text-brand-light/50 text-xs">
+          © 2025 Ours Real Estate Platform. All rights reserved.
+        </div>
       </footer>
     </main>
-  );
-}
-
-// Sub-component for Timeline to handle individual animations
-function TimelineItem({ step, index }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { margin: "-50px 0px -50px 0px", once: true });
-
-  return (
-    <motion.div 
-      ref={ref}
-      initial={{ opacity: 0, x: 20 }}
-      animate={isInView ? { opacity: 1, x: 0 } : {}}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className="relative pl-16"
-    >
-      {/* The Dot */}
-      <motion.div 
-        initial={{ scale: 0 }}
-        animate={isInView ? { scale: 1 } : {}}
-        transition={{ type: "spring", stiffness: 200, damping: 15 }}
-        className={`absolute left-0 top-1 w-10 h-10 rounded-full border-4 border-[#08101c] z-10 flex items-center justify-center
-          ${isInView ? 'bg-brand-primary shadow-[0_0_15px_rgba(14,165,233,0.5)]' : 'bg-slate-800'}
-        `}
-      >
-        <span className={`text-[10px] font-bold ${isInView ? 'text-[#050b14]' : 'text-slate-500'}`}>
-          0{index + 1}
-        </span>
-      </motion.div>
-
-      <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
-      <p className="text-slate-400 text-sm leading-relaxed max-w-md">{step.desc}</p>
-    </motion.div>
   );
 }
