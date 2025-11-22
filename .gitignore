@@ -106,3 +106,9 @@ artifacts/
 
 # Branching Tree Technique examples (reference only)
 contracts/btt-examples/
+
+# Chainlink CRE CLI binaries
+*.zip
+cre-cli.zip
+*_darwin_*.zip
+*_linux_*.tar.gz
