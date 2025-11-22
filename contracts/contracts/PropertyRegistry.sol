@@ -134,6 +134,9 @@ contract PropertyRegistry is AccessControl, Pausable {
 
     /// @notice Contador de propiedades registradas
     uint256 public propertyCount;
+    
+    /// @notice Array de todas las direcciones de tokens de propiedades (para iteración)
+    address[] public allProperties;
 
     /*//////////////////////////////////////////////////////////////
                                 MAPPINGS
@@ -384,6 +387,7 @@ contract PropertyRegistry is AccessControl, Pausable {
 
         propertyExists[params.token] = true;
         propertyCount++;
+        allProperties.push(params.token);
         issuerProperties[msg.sender].push(params.token);
         cadastralToToken[params.cadastralNumber] = params.token;
 
@@ -562,6 +566,81 @@ contract PropertyRegistry is AccessControl, Pausable {
         returns (address[] memory) 
     {
         return issuerProperties[issuer];
+    }
+    
+    /**
+     * @notice Obtiene TODAS las propiedades registradas
+     * @return Array de direcciones de tokens
+     */
+    function getAllProperties() 
+        external 
+        view 
+        returns (address[] memory) 
+    {
+        return allProperties;
+    }
+    
+    /**
+     * @notice Obtiene todas las propiedades activas (isActive = true)
+     * @return Array de direcciones de tokens activos
+     */
+    function getActiveProperties() 
+        external 
+        view 
+        returns (address[] memory) 
+    {
+        // Contar propiedades activas primero
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < allProperties.length; i++) {
+            if (properties[allProperties[i]].isActive) {
+                activeCount++;
+            }
+        }
+        
+        // Crear array del tamaño correcto
+        address[] memory active = new address[](activeCount);
+        uint256 currentIndex = 0;
+        
+        for (uint256 i = 0; i < allProperties.length; i++) {
+            if (properties[allProperties[i]].isActive) {
+                active[currentIndex] = allProperties[i];
+                currentIndex++;
+            }
+        }
+        
+        return active;
+    }
+    
+    /**
+     * @notice Obtiene propiedades filtradas por estado
+     * @param status Estado de la propiedad
+     * @return Array de direcciones de tokens con ese estado
+     */
+    function getPropertiesByStatus(PropertyStatus status) 
+        external 
+        view 
+        returns (address[] memory) 
+    {
+        // Contar propiedades con ese estado
+        uint256 count = 0;
+        for (uint256 i = 0; i < allProperties.length; i++) {
+            if (properties[allProperties[i]].status == status) {
+                count++;
+            }
+        }
+        
+        // Crear array del tamaño correcto
+        address[] memory filtered = new address[](count);
+        uint256 currentIndex = 0;
+        
+        for (uint256 i = 0; i < allProperties.length; i++) {
+            if (properties[allProperties[i]].status == status) {
+                filtered[currentIndex] = allProperties[i];
+                currentIndex++;
+            }
+        }
+        
+        return filtered;
     }
 
     /**

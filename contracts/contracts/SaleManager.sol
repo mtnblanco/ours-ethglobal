@@ -84,6 +84,9 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Mapeo para verificar si un token ya tiene una venta creada
     mapping(address => bool) public saleExists;
+    
+    /// @notice Array de todas las direcciones de tokens con ventas (para iteración)
+    address[] public allSales;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -402,6 +405,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         });
 
         saleExists[token] = true;
+        allSales.push(token);
 
         emit SaleCreated(token, msg.sender, pricePerToken);
     }
@@ -545,6 +549,106 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
     function getSale(address token) external view returns (Sale memory) {
         if (!saleExists[token]) revert SaleDoesNotExist();
         return sales[token];
+    }
+    
+    /**
+     * @notice Obtiene TODAS las sales registradas
+     * @return Array de direcciones de tokens con sales
+     */
+    function getAllSales() 
+        external 
+        view 
+        returns (address[] memory) 
+    {
+        return allSales;
+    }
+    
+    /**
+     * @notice Obtiene todas las sales activas (isActive = true)
+     * @return Array de direcciones de tokens con sales activas
+     */
+    function getActiveSales() 
+        external 
+        view 
+        returns (address[] memory) 
+    {
+        // Contar sales activas primero
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < allSales.length; i++) {
+            if (sales[allSales[i]].isActive) {
+                activeCount++;
+            }
+        }
+        
+        // Crear array del tamaño correcto
+        address[] memory active = new address[](activeCount);
+        uint256 currentIndex = 0;
+        
+        for (uint256 i = 0; i < allSales.length; i++) {
+            if (sales[allSales[i]].isActive) {
+                active[currentIndex] = allSales[i];
+                currentIndex++;
+            }
+        }
+        
+        return active;
+    }
+    
+    /**
+     * @notice Obtiene propiedades con sales activas y disponibles para invertir
+     * @dev Combina datos de PropertyRegistry y SaleManager
+     * @return tokens Array de direcciones de tokens
+     * @return names Array de nombres de propiedades
+     * @return prices Array de precios por token
+     * @return raised Array de totales recaudados
+     */
+    function getInvestableProperties() 
+        external 
+        view 
+        returns (
+            address[] memory tokens,
+            string[] memory names,
+            uint256[] memory prices,
+            uint256[] memory raised
+        ) 
+    {
+        // Contar propiedades invertibles
+        uint256 count = 0;
+        for (uint256 i = 0; i < allSales.length; i++) {
+            address token = allSales[i];
+            if (sales[token].isActive && 
+                propertyRegistry.propertyExists(token) &&
+                propertyRegistry.isPropertyAvailable(token)) {
+                count++;
+            }
+        }
+        
+        // Crear arrays del tamaño correcto
+        tokens = new address[](count);
+        names = new string[](count);
+        prices = new uint256[](count);
+        raised = new uint256[](count);
+        
+        uint256 currentIndex = 0;
+        for (uint256 i = 0; i < allSales.length; i++) {
+            address token = allSales[i];
+            if (sales[token].isActive && 
+                propertyRegistry.propertyExists(token) &&
+                propertyRegistry.isPropertyAvailable(token)) {
+                
+                tokens[currentIndex] = token;
+                prices[currentIndex] = sales[token].pricePerToken;
+                raised[currentIndex] = sales[token].totalRaised;
+                
+                // Obtener nombre de la propiedad
+                (,, string memory name,,,,,,,,,,,,,,,) = propertyRegistry.properties(token);
+                names[currentIndex] = name;
+                
+                currentIndex++;
+            }
+        }
+        
+        return (tokens, names, prices, raised);
     }
 
     /**
