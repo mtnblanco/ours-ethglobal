@@ -1,60 +1,69 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
 import Link from 'next/link';
-import { Search, Filter, MapPin } from 'lucide-react';
+import { useWeb3, usePropertyMarketplace, formatUSDC, calculateFundingPercentage } from '@/hooks/useContracts';
 
-// Mock Data for Real Estate Assets
-const properties = [
-  {
-    id: '1',
-    name: 'Skyline Commercial Tower',
-    location: 'Financial District, NY',
-    type: 'Commercial',
-    apy: '12.4%',
-    price: '$50.00',
-    funded: 78,
-    imageColor: 'bg-brand-dark/60', // Placeholder for image
-    status: 'Live'
-  },
-  {
-    id: '2',
-    name: 'Highland Luxury Apartments',
-    location: 'Austin, TX',
-    type: 'Residential',
-    apy: '9.8%',
-    price: '$50.00',
-    funded: 45,
-    imageColor: 'bg-brand-dark/50',
-    status: 'Live'
-  },
-  {
-    id: '3',
-    name: 'Logistics Hub Alpha',
-    location: 'Rotterdam, Netherlands',
-    type: 'Industrial',
-    apy: '14.2%',
-    price: '$100.00',
-    funded: 12,
-    imageColor: 'bg-brand-dark/70',
-    status: 'New'
-  },
-  {
-    id: '4',
-    name: 'Tech Park Phase II',
-    location: 'Bangalore, India',
-    type: 'Commercial',
-    apy: '11.5%',
-    price: '$50.00',
-    funded: 92,
-    imageColor: 'bg-brand-navy',
-    status: 'Closing Soon'
-  }
-];
+interface DisplayProperty {
+  id: string;
+  name: string;
+  description: string;
+  location: string;
+  propertyType: string;
+  totalValue: string;
+  tokenPrice: string;
+  fundingProgress: number;
+  status: string;
+}
 
 export default function MarketplacePage() {
-  const [filter, setFilter] = useState('All');
+  const { account, isConnected, connectWallet } = useWeb3();
+  const { properties, loading, purchaseTokens } = usePropertyMarketplace();
+
+  // Convert PropertyWithSale[] to DisplayProperty[]
+  const displayProperties: DisplayProperty[] = properties.map((prop, index) => ({
+    id: prop.property.token,
+    name: prop.property.name || `Property ${index + 1}`,
+    description: prop.property.ipfsHash ? `Property registered on blockchain with hash ${prop.property.ipfsHash.slice(0, 10)}...` : 'Tokenized real estate investment opportunity',
+    location: prop.property.location || 'Location TBD',
+    propertyType: prop.property.units > BigInt(10) ? 'Commercial' : 'Residential',
+    totalValue: (Number(prop.property.totalInvestmentTarget) / 1e6).toString(),
+    tokenPrice: (Number(prop.sale.pricePerToken) / 1e6).toString(),
+    fundingProgress: calculateFundingPercentage(prop.sale.totalRaised, prop.property.totalInvestmentTarget),
+    status: prop.saleIsActive ? 'Funding' : 'Closed'
+  }));
+
+  const handlePurchase = async (tokenAddress: string, amount: number) => {
+    if (!isConnected) {
+      await connectWallet();
+      return;
+    }
+    
+    try {
+      await purchaseTokens(tokenAddress, amount);
+      alert('Purchase successful! Tokens will be minted to your wallet.');
+    } catch (error) {
+      console.error('Purchase failed:', error);
+      alert('Purchase failed. Please try again.');
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Funding': return 'text-yellow-400 bg-yellow-400/10';
+      case 'Active': return 'text-green-400 bg-green-400/10';
+      case 'Completed': return 'text-blue-400 bg-blue-400/10';
+      default: return 'text-gray-400 bg-gray-400/10';
+    }
+  };
+
+  const formatPrice = (price: string) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0
+    }).format(Number(price));
+  };
 
   return (
     <div className="min-h-screen bg-brand-dark text-brand-light">
@@ -63,120 +72,195 @@ export default function MarketplacePage() {
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <img src="/logo.svg" alt="Ours Logo" className="h-8 w-auto" />
-            <img src="/logo tipografico celeste.svg" alt="Ours" className="h-6 w-auto" />
+            <span className="font-bold text-xl tracking-tight">ours</span>
           </Link>
-          <div className="flex gap-6 text-sm font-medium text-brand-light/80">
-            <Link href="/" className="hover:text-brand-primary transition-colors">Home</Link>
-            <Link href="#" className="text-brand-primary">Marketplace</Link>
+          
+          <div className="flex items-center gap-6">
+            <Link href="/" className="text-sm font-medium text-brand-light/80 hover:text-brand-primary transition-colors">
+              Home
+            </Link>
+            <span className="text-sm font-medium text-brand-primary">Marketplace</span>
+            
+            {/* Wallet Connection */}
+            <div className="flex items-center gap-4">
+              {isConnected ? (
+                <div className="flex items-center gap-2 px-4 py-2 bg-brand-primary/10 border border-brand-primary/30 rounded-lg">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <span className="text-sm font-mono">
+                    {account?.slice(0, 6)}...{account?.slice(-4)}
+                  </span>
+                </div>
+              ) : (
+                <button
+                  onClick={connectWallet}
+                  className="px-6 py-2 bg-brand-primary hover:bg-brand-primary/80 rounded-lg text-white font-medium transition-colors"
+                >
+                  Connect Wallet
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </nav>
 
-      <div className="pt-24 pb-12 px-6">
+      {/* Main Content */}
+      <div className="pt-32 pb-12 px-6">
         <div className="max-w-7xl mx-auto">
-
-        {/* Header & Controls */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2 text-brand-light">Marketplace</h1>
-            <p className="text-brand-light/70">Discover and invest in tokenized real-world assets.</p>
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold mb-4 text-brand-light">Real Estate Marketplace</h1>
+            <p className="text-xl text-brand-light/70 max-w-2xl mx-auto">
+              Invest in tokenized real estate properties. Own fractions, earn returns, and trade on the blockchain.
+            </p>
           </div>
 
-          <div className="flex gap-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-light/50" />
-              <input
-                type="text"
-                placeholder="Search properties..."
-                className="w-full bg-brand-surface border border-brand-primary/30 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-brand-primary transition-colors text-brand-light placeholder:text-brand-light/40"
-              />
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div className="bg-brand-surface border border-brand-primary/20 rounded-xl p-6 text-center">
+              <h3 className="text-3xl font-bold text-brand-primary mb-2">{displayProperties.length}</h3>
+              <p className="text-brand-light/70">Properties Available</p>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-brand-surface border border-brand-primary/30 rounded-lg text-sm font-medium hover:bg-brand-primary/10 transition-colors text-brand-light">
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
+            <div className="bg-brand-surface border border-brand-primary/20 rounded-xl p-6 text-center">
+              <h3 className="text-3xl font-bold text-brand-primary mb-2">
+                {formatPrice(displayProperties.reduce((sum, p) => sum + Number(p.totalValue), 0).toString())}
+              </h3>
+              <p className="text-brand-light/70">Total Value Locked</p>
+            </div>
+            <div className="bg-brand-surface border border-brand-primary/20 rounded-xl p-6 text-center">
+              <h3 className="text-3xl font-bold text-brand-primary mb-2">7-15%</h3>
+              <p className="text-brand-light/70">Expected Annual Returns</p>
+            </div>
           </div>
-        </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-6 border-b border-brand-primary/20 mb-8 text-sm text-brand-light/70">
-          {['All', 'Commercial', 'Residential', 'Industrial'].map((item) => (
-            <button
-              key={item}
-              onClick={() => setFilter(item)}
-              className={`pb-3 border-b-2 transition-colors ${filter === item ? 'text-brand-primary border-brand-primary' : 'border-transparent hover:text-brand-light'}`}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
+          {/* Loading State */}
+          {loading && (
+            <div className="text-center py-12">
+              <div className="inline-block w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+              <p className="mt-4 text-brand-light/70">Loading properties...</p>
+            </div>
+          )}
 
-        {/* Property Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((prop, i) => (
-            <motion.div
-              key={prop.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <Link href={`/marketplace/${prop.id}`} className="group block bg-brand-surface border border-brand-primary/20 rounded-xl overflow-hidden hover:border-brand-primary/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-brand-primary/10">
-
-                {/* Image Area */}
-                <div className={`h-56 ${prop.imageColor} relative`}>
-                  <div className="absolute top-4 left-4 flex gap-2">
-                    <span className="bg-brand-dark/90 backdrop-blur px-2 py-1 rounded text-xs font-bold border border-brand-primary/30 uppercase tracking-wider text-brand-light">
-                      {prop.type}
-                    </span>
-                    {prop.status === 'Closing Soon' && (
-                      <span className="bg-brand-primary/20 text-brand-primary px-2 py-1 rounded text-xs font-bold border border-brand-primary/30 uppercase tracking-wider">
-                        Closing Soon
-                      </span>
-                    )}
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40 backdrop-blur-[2px]">
-                    <span className="bg-brand-light text-brand-dark px-4 py-2 rounded-full font-bold text-sm transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                      View Details
-                    </span>
-                  </div>
+          {/* Properties Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {displayProperties.map((property) => (
+              <div key={property.id} className="bg-brand-surface border border-brand-primary/20 rounded-xl overflow-hidden hover:border-brand-primary/40 transition-colors">
+                {/* Property Image */}
+                <div className="h-48 bg-gradient-to-br from-brand-primary/20 to-brand-primary/5 flex items-center justify-center">
+                  <span className="text-6xl">{property.propertyType === 'Residential' ? '🏠' : '🏢'}</span>
                 </div>
-
-                {/* Content Area */}
+                
+                {/* Property Details */}
                 <div className="p-6">
-                  <h3 className="text-lg font-bold mb-1 group-hover:text-brand-primary transition-colors text-brand-light">{prop.name}</h3>
-                  <div className="flex items-center gap-1 text-brand-light/70 text-xs mb-6">
-                    <MapPin className="w-3 h-3" /> {prop.location}
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="text-xl font-bold text-brand-light">{property.name}</h3>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(property.status)}`}>
+                      {property.status}
+                    </span>
+                  </div>
+                  
+                  <p className="text-brand-light/70 mb-4 line-clamp-2">{property.description}</p>
+                  
+                  <div className="space-y-3 mb-6">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-brand-light/70">Location</span>
+                      <span className="text-brand-light">{property.location}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-brand-light/70">Total Value</span>
+                      <span className="text-brand-light font-bold">{formatPrice(property.totalValue)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-brand-light/70">Token Price</span>
+                      <span className="text-brand-light">{formatPrice(property.tokenPrice)} USDC</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-brand-light/70">Funded</span>
+                      <span className="text-brand-light">{property.fundingProgress}%</span>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-y-4 gap-x-8 mb-6 pt-6 border-t border-brand-primary/20">
-                    <div>
-                      <div className="text-xs text-brand-light/60 uppercase tracking-wider mb-1">Est. APY</div>
-                      <div className="text-xl font-mono text-brand-primary">{prop.apy}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-brand-light/60 uppercase tracking-wider mb-1">Token Price</div>
-                      <div className="text-xl font-mono text-brand-light">{prop.price}</div>
+                  {/* Funding Progress Bar */}
+                  <div className="mb-6">
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-brand-primary h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${property.fundingProgress}%` }}
+                      ></div>
                     </div>
                   </div>
 
-                  {/* Funding Bar */}
-                  <div className="mb-2 flex justify-between text-xs font-medium">
-                    <span className="text-brand-light/70">Funded</span>
-                    <span className="text-brand-light">{prop.funded}%</span>
-                  </div>
-                  <div className="w-full bg-brand-dark h-1.5 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${prop.funded}%` }}
-                      transition={{ duration: 1, delay: 0.5 }}
-                      className="bg-brand-primary h-full rounded-full"
-                    />
-                  </div>
+                  {/* Purchase Section */}
+                  {property.status === 'Funding' && (
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          placeholder="Tokens"
+                          min="1"
+                          className="flex-1 px-3 py-2 bg-brand-dark border border-brand-primary/30 rounded-lg text-brand-light placeholder-brand-light/50 focus:outline-none focus:border-brand-primary"
+                          id={`tokens-${property.id}`}
+                        />
+                        <span className="px-3 py-2 text-brand-light/70 text-sm">
+                          × {formatPrice(property.tokenPrice)}
+                        </span>
+                      </div>
+                      
+                      <button
+                        onClick={() => {
+                          const input = document.getElementById(`tokens-${property.id}`) as HTMLInputElement;
+                          const amount = parseInt(input?.value || '1');
+                          if (amount > 0) {
+                            handlePurchase(property.id, amount);
+                          }
+                        }}
+                        disabled={!isConnected && property.status !== 'Funding'}
+                        className="w-full px-6 py-3 bg-brand-primary hover:bg-brand-primary/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors"
+                      >
+                        {!isConnected ? 'Connect Wallet to Purchase' : 'Purchase Tokens'}
+                      </button>
+                    </div>
+                  )}
+
+                  {property.status === 'Active' && (
+                    <div className="text-center py-3">
+                      <span className="text-green-400 font-medium">🎉 Fully Funded - Generating Returns</span>
+                    </div>
+                  )}
+
+                  {property.status === 'Completed' && (
+                    <div className="text-center py-3">
+                      <span className="text-blue-400 font-medium">✅ Investment Complete</span>
+                    </div>
+                  )}
                 </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Empty State */}
+          {!loading && displayProperties.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🏗️</div>
+              <h3 className="text-2xl font-bold text-brand-light mb-4">No Properties Available</h3>
+              <p className="text-brand-light/70 max-w-md mx-auto">
+                Properties will appear here once contracts are deployed and properties are registered.
+              </p>
+              <div className="mt-8 space-y-2">
+                <p className="text-sm text-brand-light/60">Next steps to see properties:</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <span className="px-3 py-1 bg-brand-primary/10 border border-brand-primary/30 rounded text-brand-primary text-xs">
+                    Deploy contracts
+                  </span>
+                  <span className="px-3 py-1 bg-brand-primary/10 border border-brand-primary/30 rounded text-brand-primary text-xs">
+                    Register properties
+                  </span>
+                  <span className="px-3 py-1 bg-brand-primary/10 border border-brand-primary/30 rounded text-brand-primary text-xs">
+                    Start funding
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
