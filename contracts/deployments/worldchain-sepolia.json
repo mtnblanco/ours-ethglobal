@@ -1,0 +1,18 @@
+{
+  "network": "worldchain-sepolia",
+  "chainId": 4801,
+  "deployer": "0xAbdFF83ac5E8E729C6ce44E938f244fB12F6Ce32",
+  "timestamp": "2025-11-22T16:14:58.165Z",
+  "contracts": {
+    "PropertyRegistry": "0x2e95D4F69cC99b54D5C7941A0Ac19a657677ebB6",
+    "USDC": "0x5dEd3c7441BC7B4E3d12F69462f518C7b49C9388",
+    "SaleManager": "0x29D5fF6a3fe9df89869c08E6B416ae8C976449b4",
+    "RevenueDistributor": "0xD99C9ad06FeD65FcB3AE660316DBbCC285786712"
+  },
+  "gasUsed": {
+    "PropertyRegistry": "~10,000,000 gas",
+    "SaleManager": "~8,000,000 gas",
+    "RevenueDistributor": "~5,000,000 gas",
+    "MockUSDC": "~2,000,000 gas"
+  }
+}

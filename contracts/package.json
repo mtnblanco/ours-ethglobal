@@ -1,17 +1,30 @@
 {
   "name": "contracts",
   "version": "1.0.0",
-  "type": "module",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network worldchainSepolia",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network worldchain",
+    "setup:demo": "hardhat run scripts/setup-demo.ts --network worldchainSepolia",
+    "verify": "hardhat verify --network worldchainSepolia",
+    "clean": "hardhat clean"
+  },
   "devDependencies": {
     "@types/node": "^22.19.1",
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "forge-std": "github:foundry-rs/forge-std#v1.9.7",
-    "hardhat": "^3.0.15",
-    "typescript": "~5.8.0"
+    "hardhat": "^2.22.15",
+    "typescript": "~5.8.0",
+    "dotenv": "^16.3.1"
   },
   "dependencies": {
     "@onchain-id/solidity": "^2.2.1",
     "@openzeppelin/contracts": "^4.9.6",
     "@openzeppelin/contracts-upgradeable": "^4.9.6",
+    "@chainlink/contracts": "^0.8.0",
     "ethers": "^6.15.0",
     "keccak256": "^1.0.6",
     "merkletreejs": "^0.6.0"

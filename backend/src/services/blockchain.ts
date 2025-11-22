@@ -1,11 +1,33 @@
 import { ethers } from 'ethers';
 import { SmartContractResponse } from '../types';
 
-// ABI del contrato ChainlinkKYCIssuer
+// ABI del contrato ChainlinkKYCIssuer - Updated to match real contract
 const KYC_ISSUER_ABI = [
+  // Main KYC function
   "function verifyAndRequestKYC(address user, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) external",
-  "event KYCRequested(address indexed user, uint256 indexed kycId)",
-  "mapping(address => uint256) public pendingKYC"
+  
+  // View functions
+  "function getKYCStatus(address user) external view returns (uint8 status, uint256 kycId, uint256 timestamp)",
+  "function isKYCApproved(address user) external view returns (bool approved)",
+  "function getKYCData(address user) external view returns (tuple(uint8 status, uint256 kycId, uint256 timestamp, bytes32 requestId, string rejectionReason) data)",
+  
+  // Admin functions
+  "function setSubscriptionId(uint64 _subscriptionId) external",
+  "function setKYCSourceCode(string calldata _sourceCode) external",
+  "function manualKYCApproval(address user) external",
+  
+  // Owner function
+  "function owner() external view returns (address)",
+  
+  // Counters and mappings
+  "function kycIdCounter() external view returns (uint256)",
+  "function kycData(address) external view returns (uint8 status, uint256 kycId, uint256 timestamp, bytes32 requestId, string rejectionReason)",
+  
+  // Events
+  "event KYCRequested(address indexed user, uint256 indexed kycId, uint256 nullifierHash)",
+  "event KYCStatusUpdated(address indexed user, uint256 indexed kycId, uint8 status)",
+  "event ChainlinkKYCRequested(address indexed user, bytes32 indexed requestId)",
+  "event ChainlinkKYCCompleted(address indexed user, bytes32 indexed requestId, uint8 status)"
 ];
 
 interface KYCSubmissionData {
@@ -119,7 +141,7 @@ export class BlockchainService {
     }
   }
 
-  async getKYCStatus(userAddress: string): Promise<{ pending: boolean; kycId?: string }> {
+  async getKYCStatus(userAddress: string): Promise<{ pending: boolean; kycId?: string; status?: string }> {
     try {
       const contract = new ethers.Contract(
         this.contractAddress,
@@ -127,10 +149,26 @@ export class BlockchainService {
         this.provider
       );
 
-      const pendingKyc = await contract.pendingKYC(userAddress);
+      // Use the new getKYCStatus function that returns (status, kycId, timestamp)
+      const [status, kycId, timestamp] = await contract.getKYCStatus(userAddress);
+      
+      // KYC Status enum: 0=None, 1=WorldIdVerified, 2=Pending, 3=Approved, 4=Rejected, 5=Expired
+      const statusMap = {
+        0: 'None',
+        1: 'WorldIdVerified', 
+        2: 'Pending',
+        3: 'Approved',
+        4: 'Rejected',
+        5: 'Expired'
+      };
+
+      const statusNumber = parseInt(status.toString());
+      const isPending = statusNumber === 1 || statusNumber === 2; // WorldIdVerified or Pending
+      
       return {
-        pending: pendingKyc > 0,
-        kycId: pendingKyc > 0 ? pendingKyc.toString() : undefined
+        pending: isPending,
+        kycId: kycId.toString() !== '0' ? kycId.toString() : undefined,
+        status: statusMap[statusNumber as keyof typeof statusMap] || 'Unknown'
       };
     } catch (error) {
       console.error('Error getting KYC status:', error);
