@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useWeb3, usePropertyMarketplace, formatUSDC, calculateFundingPercentage } from '@/hooks/useContracts';
+import { useKYC } from '@/hooks/useKYC';
+import KYCModal from '@/components/KYCModal';
 
 interface DisplayProperty {
   id: string;
@@ -19,23 +21,42 @@ interface DisplayProperty {
 export default function MarketplacePage() {
   const { account, isConnected, connectWallet } = useWeb3();
   const { properties, loading, purchaseTokens } = usePropertyMarketplace();
+  const kyc = useKYC();
+  const [showKYCModal, setShowKYCModal] = useState(false);
 
   // Convert PropertyWithSale[] to DisplayProperty[]
   const displayProperties: DisplayProperty[] = properties.map((prop, index) => ({
     id: prop.property.token,
     name: prop.property.name || `Property ${index + 1}`,
-    description: prop.property.ipfsHash ? `Property registered on blockchain with hash ${prop.property.ipfsHash.slice(0, 10)}...` : 'Tokenized real estate investment opportunity',
+    description: 'Tokenized real estate investment opportunity with blockchain-verified ownership',
     location: prop.property.location || 'Location TBD',
-    propertyType: prop.property.units > BigInt(10) ? 'Commercial' : 'Residential',
+    propertyType: Number(prop.property.totalTokenSupply) > 1000 ? 'Commercial' : 'Residential',
     totalValue: (Number(prop.property.totalInvestmentTarget) / 1e6).toString(),
     tokenPrice: (Number(prop.sale.pricePerToken) / 1e6).toString(),
     fundingProgress: calculateFundingPercentage(prop.sale.totalRaised, prop.property.totalInvestmentTarget),
     status: prop.saleIsActive ? 'Funding' : 'Closed'
   }));
 
+  const handleStartTrading = () => {
+    if (!isConnected) {
+      alert('Please verify with World ID first');
+      return;
+    }
+    
+    if (kyc.needsKYC) {
+      setShowKYCModal(true);
+    }
+  };
+
   const handlePurchase = async (tokenAddress: string, amount: number) => {
     if (!isConnected) {
       alert('Please verify with World ID first');
+      return;
+    }
+    
+    if (!kyc.canInvest) {
+      alert('Please complete KYC verification first');
+      setShowKYCModal(true);
       return;
     }
     
@@ -81,15 +102,43 @@ export default function MarketplacePage() {
             </Link>
             <span className="text-sm font-medium text-brand-primary">Marketplace</span>
             
-            {/* World ID Status */}
+            {/* Start Trading Button */}
+            {isConnected && kyc.needsKYC && (
+              <button
+                onClick={handleStartTrading}
+                className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/80 rounded-lg text-white font-medium transition-colors flex items-center gap-2"
+              >
+                🚀 Start Trading
+              </button>
+            )}
+            
+            {/* World ID + KYC Status */}
             <div className="flex items-center gap-4">
               {isConnected ? (
-                <div className="flex items-center gap-2 px-4 py-2 bg-brand-primary/10 border border-brand-primary/30 rounded-lg">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span className="text-sm font-mono">
-                    {account?.slice(0, 6)}...{account?.slice(-4)}
-                  </span>
-                  <span className="text-xs text-brand-primary ml-2">World ID ✓</span>
+                <div className="flex items-center gap-3">
+                  {/* Wallet Status */}
+                  <div className="flex items-center gap-2 px-3 py-2 bg-brand-primary/10 border border-brand-primary/30 rounded-lg">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span className="text-sm font-mono">
+                      {account?.slice(0, 6)}...{account?.slice(-4)}
+                    </span>
+                    <span className="text-xs text-brand-primary">World ID ✓</span>
+                  </div>
+                  
+                  {/* KYC Status */}
+                  {!kyc.needsKYC && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <span className="text-xs text-green-400">KYC Verified</span>
+                    </div>
+                  )}
+                  
+                  {kyc.needsKYC && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                      <span className="text-xs text-yellow-400">KYC Required</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
@@ -111,6 +160,39 @@ export default function MarketplacePage() {
             <p className="text-xl text-brand-light/70 max-w-2xl mx-auto">
               Invest in tokenized real estate properties. Own fractions, earn returns, and trade on the blockchain.
             </p>
+            
+            {/* KYC Status Banner */}
+            {isConnected && (
+              <div className="mt-8 max-w-2xl mx-auto">
+                {kyc.needsKYC ? (
+                  <div className="bg-gradient-to-r from-yellow-500/10 to-brand-primary/10 border border-yellow-500/30 rounded-xl p-6">
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <span className="text-2xl">🔐</span>
+                      <h3 className="text-xl font-bold text-brand-light">Complete KYC to Start Trading</h3>
+                    </div>
+                    <p className="text-brand-light/70 mb-4">
+                      Secure identity verification using World ID and Chainlink's decentralized oracle network
+                    </p>
+                    <button
+                      onClick={handleStartTrading}
+                      className="px-6 py-3 bg-gradient-to-r from-brand-primary to-blue-600 hover:from-brand-primary/80 hover:to-blue-700 rounded-lg text-white font-medium transition-colors flex items-center gap-2 mx-auto"
+                    >
+                      🚀 Start KYC Verification
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-gradient-to-r from-green-500/10 to-brand-primary/10 border border-green-500/30 rounded-xl p-4">
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="text-2xl">✅</span>
+                      <div className="text-center">
+                        <h3 className="font-bold text-green-400">KYC Verified</h3>
+                        <p className="text-sm text-brand-light/70">You're ready to invest in tokenized real estate</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Stats */}
@@ -212,10 +294,12 @@ export default function MarketplacePage() {
                             handlePurchase(property.id, amount);
                           }
                         }}
-                        disabled={!isConnected}
+                        disabled={!isConnected || !kyc.canInvest}
                         className="w-full px-6 py-3 bg-brand-primary hover:bg-brand-primary/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors"
                       >
-                        {!isConnected ? 'Connecting World ID...' : 'Purchase with World ID'}
+                        {!isConnected ? 'Connecting World ID...' : 
+                         !kyc.canInvest ? 'Complete KYC to Invest' : 
+                         'Purchase with World ID'}
                       </button>
                     </div>
                   )}
@@ -262,6 +346,17 @@ export default function MarketplacePage() {
           )}
         </div>
       </div>
+      
+      {/* KYC Modal */}
+      <KYCModal
+        isOpen={showKYCModal}
+        onClose={() => setShowKYCModal(false)}
+        onRequestKYC={kyc.requestKYC}
+        kycStatus={kyc.kycData?.status || 0}
+        isLoading={kyc.isLoading}
+        error={kyc.error}
+        statusText={kyc.getKYCStatusText()}
+      />
     </div>
   );
 }
