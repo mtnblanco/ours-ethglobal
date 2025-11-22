@@ -15,6 +15,18 @@ interface KYCModalProps {
   statusText: string;
 }
 
+interface PersonalInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  dateOfBirth: string;
+  nationality: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+}
+
 /**
  * Modal que guía al usuario a través del proceso de KYC
  * Implementa la UI para el flujo documentado en KYC-ARCHITECTURE.md
@@ -30,14 +42,28 @@ export default function KYCModal({
 }: KYCModalProps) {
   const worldID = useWorldID();
   const [currentStep, setCurrentStep] = useState(1);
+  const [showPersonalInfoForm, setShowPersonalInfoForm] = useState(false);
   const [showOnfidoCapture, setShowOnfidoCapture] = useState(false);
   const [onfidoData, setOnfidoData] = useState<any>(null);
+  
+  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    dateOfBirth: '',
+    nationality: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    country: '',
+  });
 
   useEffect(() => {
     // Update step based on KYC status
     switch (kycStatus) {
       case KYCStatus.NONE:
         setCurrentStep(1);
+        setShowPersonalInfoForm(false);
         break;
       case KYCStatus.WORLD_ID_VERIFIED:
         setCurrentStep(2);
@@ -50,6 +76,7 @@ export default function KYCModal({
         break;
       case KYCStatus.REJECTED:
         setCurrentStep(1);
+        setShowPersonalInfoForm(false);
         break;
     }
   }, [kycStatus]);
@@ -58,9 +85,23 @@ export default function KYCModal({
     const success = await onRequestKYC();
     if (success) {
       setCurrentStep(2);
-      // Start Onfido process after World ID verification
-      await startOnfidoProcess();
+      // Show personal info form first
+      setShowPersonalInfoForm(true);
     }
+  };
+
+  const handlePersonalInfoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate form
+    if (!personalInfo.firstName || !personalInfo.lastName || !personalInfo.email || 
+        !personalInfo.dateOfBirth || !personalInfo.country) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setShowPersonalInfoForm(false);
+    await startOnfidoProcess();
   };
 
   const startOnfidoProcess = async () => {
@@ -70,29 +111,29 @@ export default function KYCModal({
     }
 
     try {
-      console.log('🚀 Starting Onfido verification process...');
+      console.log('🚀 Starting Onfido verification process with real user data...');
 
-      // Call backend to start Onfido process
-      const response = await fetch('http://localhost:8001/api/v1/kyc/onfido/start', {
+      // Call backend to start Onfido process with real user data
+      const response = await fetch('/api/v1/kyc/onfido/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          firstName: 'Demo', // In real app, get from user input
-          lastName: 'User',
-          email: 'demo@example.com',
+          firstName: personalInfo.firstName,
+          lastName: personalInfo.lastName,
+          email: personalInfo.email,
           userAddress: worldID.user.address,
-          dob: '1990-01-01',
+          dob: personalInfo.dateOfBirth,
           address: {
             flat_number: '1',
             building_number: '123',
-            building_name: 'Main Building',
-            street: 'Main Street',
+            building_name: 'Building',
+            street: personalInfo.address,
             sub_street: '',
-            town: 'Demo City',
-            postcode: '12345',
-            country: 'ARG'
+            town: personalInfo.city,
+            postcode: personalInfo.postalCode,
+            country: personalInfo.country
           }
         }),
       });
@@ -333,6 +374,156 @@ export default function KYCModal({
                 </button>
               )}
             </div>
+
+            {/* Personal Information Form */}
+            {showPersonalInfoForm && (
+              <div className="mt-6 p-4 bg-brand-dark/30 rounded-lg">
+                <h3 className="text-lg font-medium text-brand-light mb-3">
+                  👤 Personal Information
+                </h3>
+                <p className="text-sm text-brand-light/70 mb-4">
+                  Please provide your personal details for identity verification.
+                </p>
+                <form onSubmit={handlePersonalInfoSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-brand-light mb-1">
+                        First Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={personalInfo.firstName}
+                        onChange={(e) => setPersonalInfo(prev => ({ ...prev, firstName: e.target.value }))}
+                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        placeholder="John"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-brand-light mb-1">
+                        Last Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={personalInfo.lastName}
+                        onChange={(e) => setPersonalInfo(prev => ({ ...prev, lastName: e.target.value }))}
+                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        placeholder="Doe"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-brand-light mb-1">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={personalInfo.email}
+                      onChange={(e) => setPersonalInfo(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      placeholder="john.doe@example.com"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-brand-light mb-1">
+                        Date of Birth *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={personalInfo.dateOfBirth}
+                        onChange={(e) => setPersonalInfo(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-brand-light mb-1">
+                        Country *
+                      </label>
+                      <select
+                        required
+                        value={personalInfo.country}
+                        onChange={(e) => setPersonalInfo(prev => ({ ...prev, country: e.target.value }))}
+                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      >
+                        <option value="">Select country</option>
+                        <option value="AR">Argentina</option>
+                        <option value="BR">Brazil</option>
+                        <option value="CL">Chile</option>
+                        <option value="CO">Colombia</option>
+                        <option value="MX">Mexico</option>
+                        <option value="PE">Peru</option>
+                        <option value="UY">Uruguay</option>
+                        <option value="US">United States</option>
+                        <option value="ES">Spain</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-brand-light mb-1">
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      value={personalInfo.address}
+                      onChange={(e) => setPersonalInfo(prev => ({ ...prev, address: e.target.value }))}
+                      className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      placeholder="123 Main Street"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-brand-light mb-1">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        value={personalInfo.city}
+                        onChange={(e) => setPersonalInfo(prev => ({ ...prev, city: e.target.value }))}
+                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        placeholder="Buenos Aires"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-brand-light mb-1">
+                        Postal Code
+                      </label>
+                      <input
+                        type="text"
+                        value={personalInfo.postalCode}
+                        onChange={(e) => setPersonalInfo(prev => ({ ...prev, postalCode: e.target.value }))}
+                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        placeholder="1234"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button 
+                      type="button"
+                      onClick={() => setShowPersonalInfoForm(false)}
+                      className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      className="flex-1 bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-primary/80 transition-colors"
+                    >
+                      Continue to Document Upload
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
 
             {/* Onfido Document Capture */}
             {showOnfidoCapture && onfidoData && (

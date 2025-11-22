@@ -93,8 +93,19 @@ export function useKYC(): KYCHookReturn {
       }
 
       // Map backend response to KYCData format
+      const statusMapping = {
+        'NONE': KYCStatus.NONE,
+        'WORLD_ID_VERIFIED': KYCStatus.WORLD_ID_VERIFIED,
+        'PENDING_OFFCHAIN': KYCStatus.PENDING_OFFCHAIN,
+        'FULL_KYC': KYCStatus.FULL_KYC,
+        'REJECTED': KYCStatus.REJECTED
+      };
+
+      const backendStatus = result.status || 'NONE';
+      const mappedStatus = statusMapping[backendStatus as keyof typeof statusMapping] || KYCStatus.NONE;
+
       const kycStatusData: KYCData = {
-        status: result.kyc_pending ? KYCStatus.WORLD_ID_VERIFIED : KYCStatus.NONE,
+        status: mappedStatus,
         nullifierHash: result.nullifier_hash || '',
         requestedAt: result.requested_at || 0,
         approvedAt: result.approved_at || 0,

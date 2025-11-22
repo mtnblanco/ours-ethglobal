@@ -180,14 +180,20 @@ export class BlockchainService {
 
   async getKYCStatus(userAddress: string): Promise<{ pending: boolean; kycId?: string; status?: string; nullifier_hash?: string; requested_at?: number; approved_at?: number; kyc_data_hash?: string; onchain_id_address?: string }> {
     try {
+      console.log('🔗 Connecting to contract at:', this.contractAddress);
+      console.log('🔗 Using provider for blockchain calls');
+      
       const contract = new ethers.Contract(
         this.contractAddress,
         KYC_ISSUER_ABI,
         this.provider
       );
 
+      console.log('📞 Calling contract.getKYCData for address:', userAddress);
+      
       // Use getKYCData to get full KYC information
       const kycData = await contract.getKYCData(userAddress);
+      console.log('📋 Raw contract response:', kycData);
       
       // KYC Status enum: 0=NONE, 1=WORLD_ID_VERIFIED, 2=PENDING_OFFCHAIN, 3=FULL_KYC, 4=REJECTED
       const statusMap = {
@@ -202,7 +208,7 @@ export class BlockchainService {
       const status = statusMap[statusNumber as keyof typeof statusMap] || 'UNKNOWN';
       const pending = statusNumber === 1 || statusNumber === 2; // WORLD_ID_VERIFIED or PENDING_OFFCHAIN
 
-      return {
+      const result = {
         pending,
         status,
         nullifier_hash: kycData.nullifierHash.toString(),
@@ -211,6 +217,9 @@ export class BlockchainService {
         kyc_data_hash: kycData.kycDataHash.toString(),
         onchain_id_address: kycData.onchainIDAddress
       };
+      
+      console.log('✅ Processed KYC status:', result);
+      return result;
 
     } catch (error: any) {
       console.error('❌ Error getting KYC status:', error);

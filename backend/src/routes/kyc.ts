@@ -140,13 +140,17 @@ router.post('/worldid', async (req: Request, res: Response, next: NextFunction):
  */
 router.get('/status/:address', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    console.log('📊 GET /status/:address called for:', req.params.address);
+    
     // Initialize blockchain service lazily
     const blockchain = getBlockchainService();
+    console.log('✅ Blockchain service initialized successfully');
 
     const { address } = req.params;
     
     // Validate address format
     if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+      console.log('❌ Invalid address format:', address);
       res.status(400).json({
         success: false,
         error: 'Invalid Ethereum address format'
@@ -154,18 +158,38 @@ router.get('/status/:address', async (req: Request, res: Response, next: NextFun
       return;
     }
 
+    console.log('🔍 Calling blockchain.getKYCStatus for address:', address);
     const status = await blockchain.getKYCStatus(address);
+    console.log('📋 KYC Status result:', status);
     
-    res.json({
+    const response = {
       success: true,
       address,
-      kyc_pending: status.pending,
-      kyc_id: status.kycId
-    });
+      status: status.status,
+      pending: status.pending,
+      kyc_pending: status.pending, // Para compatibilidad
+      kyc_id: status.status, // Usar el status como ID
+      nullifier_hash: status.nullifier_hash,
+      requested_at: status.requested_at,
+      approved_at: status.approved_at,
+      kyc_data_hash: status.kyc_data_hash,
+      onchain_id_address: status.onchain_id_address
+    };
+    console.log('📤 Sending response:', response);
+    
+    res.json(response);
 
   } catch (error) {
-    console.error('Get KYC status error:', error);
-    next(error);
+    console.error('❌ Get KYC status error:', error);
+    console.error('❌ Error type:', typeof error);
+    console.error('❌ Error message:', error instanceof Error ? error.message : String(error));
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get KYC status',
+      details: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 
