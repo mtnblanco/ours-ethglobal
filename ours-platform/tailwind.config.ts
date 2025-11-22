@@ -1,3 +1,4 @@
+// tailwind.config.ts
 import type { Config } from "tailwindcss";
 
 const config: Config = {
@@ -8,19 +9,23 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // The design specifically requests Century Gothic
+        sans: ['"Century Gothic"', 'CenturyGothic', 'AppleGothic', 'sans-serif'],
+      },
       colors: {
         brand: {
-          dark: '#2c2e63',    // Deep blue-purple
-          navy: '#2c2e63',    // Deep blue-purple
-          primary: '#afcbff', // Light blue
-          accent: '#afcbff',  // Light blue
-          surface: '#2c2e63', // Deep blue-purple
-          light: '#faf9f6',   // Off-white/cream
-        }
+          // Colors extracted from "web principal.ai" XMP metadata
+          primary: "#3FA9F5", // Cyan/Blue from file
+          secondary: "#7AC943", // Green from file
+          accent: "#FF931E", // Orange from file
+          alert: "#FF1D25", // Red from file
+          dark: "#1A1A1A", // R=26 G=26 B=26 (Dark Gray)
+          navy: "#0D0D0D", // Almost Black
+          light: "#FFFFFF",
+          gray: "#BDCCD4", // Light Blue-Gray from file
+        },
       },
-      fontFamily: {
-        sans: ['Century Gothic', 'CenturyGothic', 'AppleGothic', 'sans-serif'],
-      }
     },
   },
   plugins: [],
