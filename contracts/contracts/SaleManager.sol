@@ -20,7 +20,7 @@ import "../lib/ERC3643/contracts/token/IToken.sol";
  * 
  * Arquitectura de roles:
  * - DEFAULT_ADMIN_ROLE: Administrador de la plataforma (owner)
- * - PROPERTY_ISSUER_ROLE: Constructoras que tokenizан propiedades
+ * - PROPERTY_ISSUER_ROLE: Constructoras que tokenizаn propiedades
  * - Los inversores no necesitan rol especial, solo KYC verificado en el token
  */
 contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
@@ -192,6 +192,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
     error NotSaleIssuer();
     error NoFundsToWithdraw();
     error InsufficientBalance();
+    error InvalidRecipient();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -279,7 +280,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
      * @dev Solo puede ser llamada por el admin
      */
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _pause();
+        _pause(); //esto es de openzeppelin
     }
 
     /**
@@ -287,7 +288,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
      * @dev Solo puede ser llamada por el admin
      */
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
+        _unpause(); //esto es de openzeppelin
     }
 
     /**
@@ -300,7 +301,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         onlyRole(DEFAULT_ADMIN_ROLE)
         nonReentrant
     {
-        if (recipient == address(0)) revert InvalidStablecoin();
+        if (recipient == address(0)) revert InvalidRecipient();
         
         // CHECK
         uint256 amount = accumulatedPlatformFees;
@@ -389,7 +390,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         if (!saleExists[token]) revert SaleDoesNotExist();
 
         // EFFECTS
-        sales[token].isActive = isActive;
+        sales[token].isActive = isActive; //este parametro llega true o false
 
         emit SaleStatusChanged(token, isActive);
     }
@@ -470,7 +471,11 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         stablecoin.safeTransferFrom(msg.sender, address(this), totalCost);
 
         // 2. Mintear tokens al comprador
-        // El token ERC-3643 internamente verifica que el comprador esté KYC-verificado
+        // IMPORTANTE: El token ERC-3643 internamente verifica:
+        //   - identityRegistry.isVerified(msg.sender)
+        //   - compliance.canTransfer(address(0), msg.sender, amount)
+        // Si el comprador NO tiene KYC válido, mint() hará revert
+        // y toda la transacción se revertirá (incluyendo la transferencia de USDC)
         IToken(token).mint(msg.sender, amount);
 
         emit TokensPurchased(msg.sender, token, amount, totalCost, platformFee);
