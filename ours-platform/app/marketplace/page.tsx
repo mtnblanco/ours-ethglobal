@@ -35,13 +35,13 @@ export default function MarketplacePage() {
 
   const handlePurchase = async (tokenAddress: string, amount: number) => {
     if (!isConnected) {
-      await connectWallet();
+      alert('Please verify with World ID first');
       return;
     }
     
     try {
       await purchaseTokens(tokenAddress, amount);
-      alert('Purchase successful! Tokens will be minted to your wallet.');
+      alert('Purchase successful! Transaction submitted via World ID.');
     } catch (error) {
       console.error('Purchase failed:', error);
       alert('Purchase failed. Please try again.');
@@ -81,7 +81,7 @@ export default function MarketplacePage() {
             </Link>
             <span className="text-sm font-medium text-brand-primary">Marketplace</span>
             
-            {/* Wallet Connection */}
+            {/* World ID Status */}
             <div className="flex items-center gap-4">
               {isConnected ? (
                 <div className="flex items-center gap-2 px-4 py-2 bg-brand-primary/10 border border-brand-primary/30 rounded-lg">
@@ -89,14 +89,13 @@ export default function MarketplacePage() {
                   <span className="text-sm font-mono">
                     {account?.slice(0, 6)}...{account?.slice(-4)}
                   </span>
+                  <span className="text-xs text-brand-primary ml-2">World ID ✓</span>
                 </div>
               ) : (
-                <button
-                  onClick={connectWallet}
-                  className="px-6 py-2 bg-brand-primary hover:bg-brand-primary/80 rounded-lg text-white font-medium transition-colors"
-                >
-                  Connect Wallet
-                </button>
+                <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-yellow-400">Connecting World ID...</span>
+                </div>
               )}
             </div>
           </div>
@@ -213,10 +212,10 @@ export default function MarketplacePage() {
                             handlePurchase(property.id, amount);
                           }
                         }}
-                        disabled={!isConnected && property.status !== 'Funding'}
+                        disabled={!isConnected}
                         className="w-full px-6 py-3 bg-brand-primary hover:bg-brand-primary/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors"
                       >
-                        {!isConnected ? 'Connect Wallet to Purchase' : 'Purchase Tokens'}
+                        {!isConnected ? 'Connecting World ID...' : 'Purchase with World ID'}
                       </button>
                     </div>
                   )}

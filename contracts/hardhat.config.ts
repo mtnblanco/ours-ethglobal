@@ -1,8 +1,8 @@
-import { defineConfig } from "hardhat/config";
-import "@nomiclabs/hardhat-ethers";
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-ethers";
 import "dotenv/config";
 
-export default defineConfig({
+const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
@@ -45,37 +45,15 @@ export default defineConfig({
       url: process.env.WORLD_CHAIN_RPC_URL || "https://worldchain-mainnet.g.alchemy.com/v2/demo",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 480, // World Chain mainnet ID
-      gasPrice: 20000000000, // 20 gwei
+      gasPrice: 1000000000, // 1 gwei (reducido 20x)
     },
     worldchainSepolia: {
       url: process.env.WORLD_CHAIN_SEPOLIA_RPC_URL || "https://worldchain-sepolia.g.alchemy.com/v2/demo",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 4801, // World Chain Sepolia testnet ID
-      gasPrice: 20000000000, // 20 gwei
+      gasPrice: 100000000, // 0.1 gwei (reducido 200x) - súper barato para testnet
     },
   },
-  etherscan: {
-    apiKey: {
-      worldchain: process.env.WORLDCHAIN_ETHERSCAN_API_KEY || "",
-      worldchainSepolia: process.env.WORLDCHAIN_ETHERSCAN_API_KEY || "",
-    },
-    customChains: [
-      {
-        network: "worldchain",
-        chainId: 480,
-        urls: {
-          apiURL: "https://worldchain-mainnet.explorer.alchemy.com/api",
-          browserURL: "https://worldchain-mainnet.explorer.alchemy.com",
-        },
-      },
-      {
-        network: "worldchainSepolia",
-        chainId: 4801,
-        urls: {
-          apiURL: "https://worldchain-sepolia.explorer.alchemy.com/api",
-          browserURL: "https://worldchain-sepolia.explorer.alchemy.com",
-        },
-      },
-    ],
-  },
-});
+};
+
+export default config;

@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "setup:demo": "npx hardhat run scripts/setup-demo.ts --network worldchainSepolia"
+  }
+}
