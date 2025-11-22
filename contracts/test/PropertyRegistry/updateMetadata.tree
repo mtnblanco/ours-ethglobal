@@ -1,0 +1,23 @@
+UpdateMetadataTest
+├── when the property does not exist
+│   └── it should revert with PropertyDoesNotExist
+├── when the property exists
+│   ├── when the caller is not the property issuer
+│   │   └── it should revert with NotPropertyIssuer
+│   ├── when the caller is the property issuer
+│   │   ├── when the contract is paused
+│   │   │   └── it should revert with EnforcedPause
+│   │   └── when the contract is not paused
+│   │       ├── when the property is not active
+│   │       │   └── it should revert with PropertyNotActive
+│   │       └── when the property is active
+│   │           ├── when the new IPFS hash is empty
+│   │           │   └── it should update to empty hash and emit event
+│   │           ├── when the new IPFS hash is the same as current
+│   │           │   └── it should update anyway and emit event
+│   │           └── when the new IPFS hash is different
+│   │               ├── it should update the IPFS hash
+│   │               ├── it should emit PropertyMetadataUpdated event
+│   │               ├── it should preserve all other property data
+│   │               └── it should work regardless of property status (Planning, InConstruction, Completed)
+

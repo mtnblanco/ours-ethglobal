@@ -1,0 +1,35 @@
+UpdateConstructionDatesTest
+├── when the property does not exist
+│   └── it should revert with PropertyDoesNotExist
+├── when the property exists
+│   ├── when the caller is not the property issuer
+│   │   └── it should revert with NotPropertyIssuer
+│   ├── when the caller is the property issuer
+│   │   ├── when the contract is paused
+│   │   │   └── it should revert with EnforcedPause
+│   │   └── when the contract is not paused
+│   │       ├── when the property is not active
+│   │       │   └── it should revert with PropertyNotActive
+│   │       └── when the property is active
+│   │           ├── when the new construction start is zero
+│   │           │   └── it should revert with InvalidDates
+│   │           ├── when the new estimated completion is zero
+│   │           │   └── it should revert with InvalidDates
+│   │           ├── when the new estimated completion is before or equal to construction start
+│   │           │   └── it should revert with InvalidDates
+│   │           ├── when the property status is Completed
+│   │           │   └── it should revert with PropertyAlreadyCompleted
+│   │           ├── when the property status is Sold
+│   │           │   └── it should revert with PropertyAlreadyCompleted
+│   │           └── when dates are valid and status allows updates
+│   │               ├── when status is Planning
+│   │               │   ├── it should update both dates
+│   │               │   ├── it should emit ConstructionDatesUpdated event
+│   │               │   └── it should preserve all other property data
+│   │               ├── when status is InConstruction
+│   │               │   ├── it should update both dates
+│   │               │   ├── it should emit ConstructionDatesUpdated event
+│   │               │   └── it should allow extending deadlines
+│   │               └── when dates are the same as current
+│   │                   └── it should update anyway (idempotence)
+

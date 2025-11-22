@@ -1,0 +1,45 @@
+RegisterPropertyTest
+├── when the caller lacks PROPERTY_ISSUER_ROLE
+│   └── it should revert with AccessControlUnauthorizedAccount
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+└── when the caller has PROPERTY_ISSUER_ROLE and contract is not paused
+    ├── when the token address is zero
+    │   └── it should revert with InvalidToken
+    ├── when the token already has a registered property
+    │   └── it should revert with PropertyAlreadyExists
+    ├── when the property name is empty
+    │   └── it should revert with InvalidName
+    ├── when the location is empty
+    │   └── it should revert with InvalidLocation
+    ├── when the total area is zero
+    │   └── it should revert with InvalidArea
+    ├── when the units count is zero
+    │   └── it should revert with InvalidUnits
+    ├── when the construction start is zero
+    │   └── it should revert with InvalidDates
+    ├── when the estimated completion is zero
+    │   └── it should revert with InvalidDates
+    ├── when the estimated completion is before or equal to construction start
+    │   └── it should revert with InvalidDates
+    ├── when the cadastral number is empty
+    │   └── it should revert with InvalidCadastralNumber
+    ├── when the cadastral number is already used
+    │   └── it should revert with CadastralNumberAlreadyUsed
+    ├── when the total token supply is zero
+    │   └── it should revert with InvalidTokenSupply
+    ├── when the total investment target is zero
+    │   └── it should revert with InvalidInvestmentTarget
+    ├── when the estimated sale price is zero
+    │   └── it should revert with InvalidSalePrice
+    ├── when the estimated sale price is less than or equal to investment target
+    │   └── it should revert with InvalidSalePrice
+    └── when all parameters are valid
+        ├── it should store the property with correct data
+        ├── it should mark the property as existing
+        ├── it should increment the property count
+        ├── it should add the token to issuer's properties
+        ├── it should map cadastral number to token
+        ├── it should emit PropertyRegistered event
+        └── it should emit FinancialDataUpdated event
+

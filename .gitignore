@@ -1,0 +1,21 @@
+# Branching Tree Technique examples (reference only)
+contracts/btt-examples/
+
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
