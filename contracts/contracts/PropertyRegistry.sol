@@ -67,6 +67,9 @@ contract PropertyRegistry is AccessControl, Pausable {
      * @param estimatedCompletion Timestamp estimado de finalización
      * @param ipfsHash Hash IPFS con documentación
      * @param cadastralNumber Número catastral
+     * @param totalTokenSupply Total de tokens a emitir
+     * @param totalInvestmentTarget Meta de recaudación total
+     * @param estimatedSalePrice Precio estimado de venta final de la propiedad
      */
     struct PropertyParams {
         address token;
@@ -78,6 +81,9 @@ contract PropertyRegistry is AccessControl, Pausable {
         uint256 estimatedCompletion;
         string ipfsHash;
         string cadastralNumber;
+        uint256 totalTokenSupply;
+        uint256 totalInvestmentTarget;
+        uint256 estimatedSalePrice;
     }
 
     /**
@@ -97,6 +103,9 @@ contract PropertyRegistry is AccessControl, Pausable {
      * @param legalOwner Propietario legal de la propiedad (constructora)
      * @param registeredAt Timestamp de registro en el contrato
      * @param isActive Si el registro está activo
+     * @param totalTokenSupply Total de tokens que representa la propiedad
+     * @param totalInvestmentTarget Meta de recaudación (costo del proyecto)
+     * @param estimatedSalePrice Precio estimado de venta final
      */
     struct Property {
         address token;
@@ -114,6 +123,9 @@ contract PropertyRegistry is AccessControl, Pausable {
         address legalOwner;
         uint256 registeredAt;
         bool isActive;
+        uint256 totalTokenSupply;
+        uint256 totalInvestmentTarget;
+        uint256 estimatedSalePrice;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -225,6 +237,20 @@ contract PropertyRegistry is AccessControl, Pausable {
         bool isActive
     );
 
+    /**
+     * @notice Emitido cuando se actualizan datos financieros
+     * @param token Dirección del token
+     * @param totalTokenSupply Total de tokens
+     * @param totalInvestmentTarget Meta de inversión
+     * @param estimatedSalePrice Precio estimado de venta
+     */
+    event FinancialDataUpdated(
+        address indexed token,
+        uint256 totalTokenSupply,
+        uint256 totalInvestmentTarget,
+        uint256 estimatedSalePrice
+    );
+
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -244,6 +270,9 @@ contract PropertyRegistry is AccessControl, Pausable {
     error PropertyNotActive();
     error InvalidStatusTransition();
     error PropertyAlreadyCompleted();
+    error InvalidTokenSupply();
+    error InvalidInvestmentTarget();
+    error InvalidSalePrice();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -324,6 +353,12 @@ contract PropertyRegistry is AccessControl, Pausable {
         if (params.estimatedCompletion <= params.constructionStart) revert InvalidDates();
         if (bytes(params.cadastralNumber).length == 0) revert InvalidCadastralNumber();
         if (cadastralToToken[params.cadastralNumber] != address(0)) revert CadastralNumberAlreadyUsed();
+        
+        // Validaciones financieras
+        if (params.totalTokenSupply == 0) revert InvalidTokenSupply();
+        if (params.totalInvestmentTarget == 0) revert InvalidInvestmentTarget();
+        if (params.estimatedSalePrice == 0) revert InvalidSalePrice();
+        if (params.estimatedSalePrice <= params.totalInvestmentTarget) revert InvalidSalePrice();
 
         // EFFECTS
         properties[params.token] = Property({
@@ -341,7 +376,10 @@ contract PropertyRegistry is AccessControl, Pausable {
             cadastralNumber: params.cadastralNumber,
             legalOwner: msg.sender,
             registeredAt: block.timestamp,
-            isActive: true
+            isActive: true,
+            totalTokenSupply: params.totalTokenSupply,
+            totalInvestmentTarget: params.totalInvestmentTarget,
+            estimatedSalePrice: params.estimatedSalePrice
         });
 
         propertyExists[params.token] = true;
@@ -350,6 +388,12 @@ contract PropertyRegistry is AccessControl, Pausable {
         cadastralToToken[params.cadastralNumber] = params.token;
 
         emit PropertyRegistered(params.token, msg.sender, params.name, params.cadastralNumber);
+        emit FinancialDataUpdated(
+            params.token, 
+            params.totalTokenSupply, 
+            params.totalInvestmentTarget, 
+            params.estimatedSalePrice
+        );
     }
 
     /**
@@ -590,6 +634,121 @@ contract PropertyRegistry is AccessControl, Pausable {
         uint256 total = prop.estimatedCompletion - prop.constructionStart;
         
         return (elapsed * 100) / total;
+    }
+
+    /**
+     * @notice Calcula la proyección de inversión para una cantidad de tokens
+     * @dev Útil para mostrar al inversor qué obtendría por su inversión
+     * @param token Dirección del token
+     * @param tokenAmount Cantidad de tokens que planea comprar
+     * @param pricePerToken Precio actual por token en USDC
+     * @return investmentCost Costo total de la inversión
+     * @return ownershipPercentageBps Porcentaje de propiedad en basis points (100 = 1%)
+     * @return estimatedReturn Ganancia estimada en USDC
+     * @return estimatedROIBps ROI estimado en basis points (5000 = 50%)
+     */
+    function getInvestmentProjection(
+        address token,
+        uint256 tokenAmount,
+        uint256 pricePerToken
+    )
+        external
+        view
+        propertyRegistered(token)
+        returns (
+            uint256 investmentCost,
+            uint256 ownershipPercentageBps,
+            uint256 estimatedReturn,
+            uint256 estimatedROIBps
+        )
+    {
+        Property memory prop = properties[token];
+
+        // Costo de inversión
+        investmentCost = tokenAmount * pricePerToken;
+
+        // Porcentaje de propiedad en basis points (10000 = 100%)
+        ownershipPercentageBps = (tokenAmount * 10000) / prop.totalTokenSupply;
+
+        // Ganancia estimada basada en el porcentaje de propiedad
+        estimatedReturn = (prop.estimatedSalePrice * ownershipPercentageBps) / 10000;
+
+        // ROI en basis points
+        if (investmentCost > 0) {
+            // ROI = ((estimatedReturn - investmentCost) / investmentCost) * 10000
+            if (estimatedReturn > investmentCost) {
+                estimatedROIBps = ((estimatedReturn - investmentCost) * 10000) / investmentCost;
+            } else {
+                estimatedROIBps = 0;
+            }
+        }
+
+        return (investmentCost, ownershipPercentageBps, estimatedReturn, estimatedROIBps);
+    }
+
+    /**
+     * @notice Obtiene toda la información financiera de una propiedad
+     * @param token Dirección del token
+     * @return totalTokenSupply Total de tokens que representa la propiedad
+     * @return totalInvestmentTarget Meta de recaudación
+     * @return estimatedSalePrice Precio estimado de venta
+     * @return pricePerTokenTarget Precio objetivo por token (investmentTarget / tokenSupply)
+     * @return expectedProfitMarginBps Margen de ganancia esperado en bps
+     */
+    function getFinancialInfo(address token)
+        external
+        view
+        propertyRegistered(token)
+        returns (
+            uint256 totalTokenSupply,
+            uint256 totalInvestmentTarget,
+            uint256 estimatedSalePrice,
+            uint256 pricePerTokenTarget,
+            uint256 expectedProfitMarginBps
+        )
+    {
+        Property memory prop = properties[token];
+
+        totalTokenSupply = prop.totalTokenSupply;
+        totalInvestmentTarget = prop.totalInvestmentTarget;
+        estimatedSalePrice = prop.estimatedSalePrice;
+
+        // Precio objetivo por token
+        pricePerTokenTarget = totalInvestmentTarget / totalTokenSupply;
+
+        // Margen de ganancia esperado en basis points
+        if (totalInvestmentTarget > 0) {
+            expectedProfitMarginBps = ((estimatedSalePrice - totalInvestmentTarget) * 10000) / totalInvestmentTarget;
+        }
+
+        return (
+            totalTokenSupply,
+            totalInvestmentTarget,
+            estimatedSalePrice,
+            pricePerTokenTarget,
+            expectedProfitMarginBps
+        );
+    }
+
+    /**
+     * @notice Calcula el ROI máximo posible para esta propiedad
+     * @param token Dirección del token
+     * @return maxROIBps ROI máximo en basis points si se compra al precio objetivo
+     */
+    function getMaximumROI(address token)
+        external
+        view
+        propertyRegistered(token)
+        returns (uint256 maxROIBps)
+    {
+        Property memory prop = properties[token];
+
+        if (prop.totalInvestmentTarget > 0) {
+            // ROI máximo = ((estimatedSalePrice - totalInvestmentTarget) / totalInvestmentTarget) * 10000
+            maxROIBps = ((prop.estimatedSalePrice - prop.totalInvestmentTarget) * 10000) / prop.totalInvestmentTarget;
+        }
+
+        return maxROIBps;
     }
 
     /*//////////////////////////////////////////////////////////////

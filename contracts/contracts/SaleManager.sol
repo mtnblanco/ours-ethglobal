@@ -388,7 +388,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         if (!propertyRegistry.isPropertyAvailable(token)) revert PropertyNotAvailable();
         
         // Validar que el caller es el issuer de la propiedad registrada
-        (,address propertyIssuer,,,,,,,,,,,,,) = propertyRegistry.properties(token);
+        (,address propertyIssuer,,,,,,,,,,,,,,,,) = propertyRegistry.properties(token);
         if (propertyIssuer != msg.sender) revert NotSaleIssuer();
 
         // EFFECTS
@@ -697,7 +697,7 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         ) 
     {
         if (propertyRegistry.propertyExists(token)) {
-            (,,,,,uint256 units,,,,,,,,,) = propertyRegistry.properties(token);
+            (,,,,,uint256 units,,,,,,,,,,,,) = propertyRegistry.properties(token);
             totalUnitsAvailable = units;
             constructionProgress = propertyRegistry.getConstructionProgress(token);
             PropertyRegistry.Property memory prop = propertyRegistry.getProperty(token);
@@ -710,4 +710,154 @@ contract SaleManager is AccessControl, ReentrancyGuard, Pausable {
         
         return (totalUnitsAvailable, totalRaised, constructionProgress, propertyStatus);
     }
+
+    /**
+     * @notice Obtiene la proyección de inversión para una compra
+     * @dev Combina precio de venta actual con proyección financiera de la propiedad
+     * @param token Dirección del token
+     * @param tokenAmount Cantidad de tokens que planea comprar
+     * @return investmentCost Costo total con comisión de plataforma
+     * @return netInvestment Inversión neta (sin comisión)
+     * @return ownershipPercentageBps Porcentaje de propiedad en bps
+     * @return estimatedReturn Ganancia estimada al vender la propiedad
+     * @return estimatedROIBps ROI estimado en basis points
+     */
+    function getInvestmentProjection(address token, uint256 tokenAmount)
+        external
+        view
+        returns (
+            uint256 investmentCost,
+            uint256 netInvestment,
+            uint256 ownershipPercentageBps,
+            uint256 estimatedReturn,
+            uint256 estimatedROIBps
+        )
+    {
+        if (!saleExists[token]) revert SaleDoesNotExist();
+        
+        Sale memory sale = sales[token];
+        
+        // Calcular costo con comisión
+        uint256 totalCost = sale.pricePerToken * tokenAmount;
+        uint256 platformFee = (totalCost * platformFeeBps) / 10000;
+        
+        investmentCost = totalCost;
+        netInvestment = totalCost - platformFee;
+        
+        // Obtener proyección de PropertyRegistry
+        (
+            , 
+            ownershipPercentageBps, 
+            estimatedReturn, 
+            estimatedROIBps
+        ) = propertyRegistry.getInvestmentProjection(
+            token, 
+            tokenAmount, 
+            sale.pricePerToken
+        );
+        
+        return (
+            investmentCost,
+            netInvestment,
+            ownershipPercentageBps,
+            estimatedReturn,
+            estimatedROIBps
+        );
+    }
+
+    /**
+     * @notice Obtiene información financiera completa para decisión de inversión
+     * @param token Dirección del token
+     * @return pricePerToken Precio actual por token en la venta
+     * @return totalTokenSupply Total de tokens de la propiedad
+     * @return totalInvestmentTarget Meta de recaudación
+     * @return estimatedSalePrice Precio estimado de venta final
+     * @return expectedROIBps ROI máximo esperado en bps
+     * @return totalRaised Total ya recaudado
+     * @return remainingTokens Tokens disponibles para compra
+     */
+    function getInvestmentInfo(address token)
+        external
+        view
+        returns (
+            uint256 pricePerToken,
+            uint256 totalTokenSupply,
+            uint256 totalInvestmentTarget,
+            uint256 estimatedSalePrice,
+            uint256 expectedROIBps,
+            uint256 totalRaised,
+            uint256 remainingTokens
+        )
+    {
+        if (!saleExists[token]) revert SaleDoesNotExist();
+        
+        Sale memory sale = sales[token];
+        pricePerToken = sale.pricePerToken;
+        totalRaised = sale.totalRaised;
+        
+        // Obtener info financiera de PropertyRegistry
+        (
+            totalTokenSupply,
+            totalInvestmentTarget,
+            estimatedSalePrice,
+            ,
+            expectedROIBps
+        ) = propertyRegistry.getFinancialInfo(token);
+        
+        // Calcular tokens restantes (aproximado basado en recaudación)
+        uint256 tokensSold = totalRaised / pricePerToken;
+        remainingTokens = totalTokenSupply > tokensSold ? totalTokenSupply - tokensSold : 0;
+        
+        return (
+            pricePerToken,
+            totalTokenSupply,
+            totalInvestmentTarget,
+            estimatedSalePrice,
+            expectedROIBps,
+            totalRaised,
+            remainingTokens
+        );
+    }
+
+    /**
+     * @notice Ejemplo de cómo se vería una inversión
+     * @dev Útil para mostrar en el frontend un ejemplo con diferentes cantidades
+     * @param token Dirección del token
+     * @return example1 Proyección para 1 token
+     * @return example10 Proyección para 10 tokens
+     * @return example100 Proyección para 100 tokens
+     */
+    function getInvestmentExamples(address token)
+        external
+        view
+        returns (
+            string memory example1,
+            string memory example10,
+            string memory example100
+        )
+    {
+        if (!saleExists[token]) revert SaleDoesNotExist();
+        
+        Sale memory sale = sales[token];
+        
+        // Ejemplo 1 token
+        (uint256 cost1, , , uint256 return1, uint256 roi1) = 
+            this.getInvestmentProjection(token, 1);
+        
+        // Ejemplo 10 tokens
+        (uint256 cost10, , , uint256 return10, uint256 roi10) = 
+            this.getInvestmentProjection(token, 10);
+        
+        // Ejemplo 100 tokens  
+        (uint256 cost100, , , uint256 return100, uint256 roi100) = 
+            this.getInvestmentProjection(token, 100);
+        
+        // Formatear ejemplos (simplificado, en frontend se formatearía mejor)
+        example1 = "1 token";
+        example10 = "10 tokens";
+        example100 = "100 tokens";
+        
+        return (example1, example10, example100);
+    }
 }
+
