@@ -70,7 +70,7 @@ contract UpdateConstructionDatesTest is BaseTest {
         vm.prank(investor1); // investor1 no es el issuer
         vm.expectRevert(PropertyRegistry.NotPropertyIssuer.selector);
         propertyRegistry.updateConstructionDates(
-            mockToken,
+            address(propertyToken),
             block.timestamp + 30 days,
             block.timestamp + 365 days
         );
@@ -99,7 +99,7 @@ contract UpdateConstructionDatesTest is BaseTest {
         vm.prank(propertyIssuer);
         vm.expectRevert("Pausable: paused");
         propertyRegistry.updateConstructionDates(
-            mockToken,
+            address(propertyToken),
             block.timestamp + 30 days,
             block.timestamp + 365 days
         );
@@ -124,12 +124,12 @@ contract UpdateConstructionDatesTest is BaseTest {
     {
         // Desactivar la propiedad
         vm.prank(propertyIssuer);
-        propertyRegistry.setPropertyActive(mockToken, false);
+        propertyRegistry.setPropertyActive(address(propertyToken), false);
         
         vm.prank(propertyIssuer);
         vm.expectRevert(PropertyRegistry.PropertyNotActive.selector);
         propertyRegistry.updateConstructionDates(
-            mockToken,
+            address(propertyToken),
             block.timestamp + 30 days,
             block.timestamp + 365 days
         );
@@ -156,7 +156,7 @@ contract UpdateConstructionDatesTest is BaseTest {
         vm.prank(propertyIssuer);
         vm.expectRevert(PropertyRegistry.InvalidDates.selector);
         propertyRegistry.updateConstructionDates(
-            mockToken,
+            address(propertyToken),
             0, // Zero construction start
             block.timestamp + 365 days
         );
@@ -174,7 +174,7 @@ contract UpdateConstructionDatesTest is BaseTest {
         vm.prank(propertyIssuer);
         vm.expectRevert(PropertyRegistry.InvalidDates.selector);
         propertyRegistry.updateConstructionDates(
-            mockToken,
+            address(propertyToken),
             block.timestamp + 30 days,
             0 // Zero estimated completion
         );
@@ -194,7 +194,7 @@ contract UpdateConstructionDatesTest is BaseTest {
         vm.prank(propertyIssuer);
         vm.expectRevert(PropertyRegistry.InvalidDates.selector);
         propertyRegistry.updateConstructionDates(
-            mockToken,
+            address(propertyToken),
             startDate,
             startDate // Igual, no mayor
         );
@@ -211,14 +211,14 @@ contract UpdateConstructionDatesTest is BaseTest {
     {
         // Transición correcta: Planning -> InConstruction -> Completed
         vm.startPrank(verifier);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.InConstruction);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.Completed);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.InConstruction);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.Completed);
         vm.stopPrank();
         
         vm.prank(propertyIssuer);
         vm.expectRevert(PropertyRegistry.PropertyAlreadyCompleted.selector);
         propertyRegistry.updateConstructionDates(
-            mockToken,
+            address(propertyToken),
             block.timestamp + 30 days,
             block.timestamp + 365 days
         );
@@ -235,15 +235,15 @@ contract UpdateConstructionDatesTest is BaseTest {
     {
         // Transición correcta: Planning -> InConstruction -> Completed -> Sold
         vm.startPrank(verifier);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.InConstruction);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.Completed);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.Sold);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.InConstruction);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.Completed);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.Sold);
         vm.stopPrank();
         
         vm.prank(propertyIssuer);
         vm.expectRevert(PropertyRegistry.PropertyAlreadyCompleted.selector);
         propertyRegistry.updateConstructionDates(
-            mockToken,
+            address(propertyToken),
             block.timestamp + 30 days,
             block.timestamp + 365 days
         );
@@ -276,10 +276,10 @@ contract UpdateConstructionDatesTest is BaseTest {
         uint256 newCompletion = block.timestamp + 800 days;
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateConstructionDates(mockToken, newStart, newCompletion);
+        propertyRegistry.updateConstructionDates(address(propertyToken), newStart, newCompletion);
         
         // Verificar actualización
-        (, , , , , , uint256 constructionStart, uint256 estimatedCompletion, , , , , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , uint256 constructionStart, uint256 estimatedCompletion, , , , , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         
         assertEq(constructionStart, newStart, "Construction start should be updated");
         assertEq(estimatedCompletion, newCompletion, "Estimated completion should be updated");
@@ -299,10 +299,10 @@ contract UpdateConstructionDatesTest is BaseTest {
         uint256 newCompletion = block.timestamp + 800 days;
         
         vm.expectEmit(true, false, false, true, address(propertyRegistry));
-        emit ConstructionDatesUpdated(mockToken, newStart, newCompletion);
+        emit ConstructionDatesUpdated(address(propertyToken), newStart, newCompletion);
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateConstructionDates(mockToken, newStart, newCompletion);
+        propertyRegistry.updateConstructionDates(address(propertyToken), newStart, newCompletion);
     }
     
     /// @dev when status is Planning
@@ -322,7 +322,7 @@ contract UpdateConstructionDatesTest is BaseTest {
         PropertyRegistry.PropertyStatus statusBefore;
         
         {
-            (, address _issuer, string memory _name, , uint256 _area, , , , , PropertyRegistry.PropertyStatus _status, , , , , , , , ) = propertyRegistry.properties(mockToken);
+            (, address _issuer, string memory _name, , uint256 _area, , , , , PropertyRegistry.PropertyStatus _status, , , , , , , , ) = propertyRegistry.properties(address(propertyToken));
             issuerBefore = _issuer;
             nameBefore = _name;
             totalAreaBefore = _area;
@@ -333,10 +333,10 @@ contract UpdateConstructionDatesTest is BaseTest {
         uint256 newCompletion = block.timestamp + 800 days;
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateConstructionDates(mockToken, newStart, newCompletion);
+        propertyRegistry.updateConstructionDates(address(propertyToken), newStart, newCompletion);
         
         // Verificar preservación
-        (, address issuerAfter, string memory nameAfter, , uint256 totalAreaAfter, , uint256 constructionStartAfter, uint256 estimatedCompletionAfter, , PropertyRegistry.PropertyStatus statusAfter, , , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, address issuerAfter, string memory nameAfter, , uint256 totalAreaAfter, , uint256 constructionStartAfter, uint256 estimatedCompletionAfter, , PropertyRegistry.PropertyStatus statusAfter, , , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         
         assertEq(issuerAfter, issuerBefore, "Issuer should not change");
         assertEq(nameAfter, nameBefore, "Name should not change");
@@ -364,16 +364,16 @@ contract UpdateConstructionDatesTest is BaseTest {
     {
         // Cambiar a InConstruction
         vm.prank(verifier);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.InConstruction);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.InConstruction);
         
         uint256 newStart = block.timestamp + 90 days;
         uint256 newCompletion = block.timestamp + 1000 days;
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateConstructionDates(mockToken, newStart, newCompletion);
+        propertyRegistry.updateConstructionDates(address(propertyToken), newStart, newCompletion);
         
         // Verificar actualización
-        (, , , , , , uint256 constructionStart, uint256 estimatedCompletion, , , , , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , uint256 constructionStart, uint256 estimatedCompletion, , , , , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         
         assertEq(constructionStart, newStart, "Construction start should be updated");
         assertEq(estimatedCompletion, newCompletion, "Estimated completion should be updated");
@@ -391,16 +391,16 @@ contract UpdateConstructionDatesTest is BaseTest {
     {
         // Cambiar a InConstruction
         vm.prank(verifier);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.InConstruction);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.InConstruction);
         
         uint256 newStart = block.timestamp + 90 days;
         uint256 newCompletion = block.timestamp + 1000 days;
         
         vm.expectEmit(true, false, false, true, address(propertyRegistry));
-        emit ConstructionDatesUpdated(mockToken, newStart, newCompletion);
+        emit ConstructionDatesUpdated(address(propertyToken), newStart, newCompletion);
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateConstructionDates(mockToken, newStart, newCompletion);
+        propertyRegistry.updateConstructionDates(address(propertyToken), newStart, newCompletion);
     }
     
     /// @dev when status is InConstruction
@@ -415,20 +415,20 @@ contract UpdateConstructionDatesTest is BaseTest {
     {
         // Cambiar a InConstruction
         vm.prank(verifier);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.InConstruction);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.InConstruction);
         
         // Obtener fechas actuales
-        (, , , , , , uint256 oldStart, uint256 oldCompletion, , , , , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , uint256 oldStart, uint256 oldCompletion, , , , , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         
         // Extender fechas (común en construcción real)
         uint256 extendedStart = oldStart + 30 days;
         uint256 extendedCompletion = oldCompletion + 180 days; // 6 meses de retraso
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateConstructionDates(mockToken, extendedStart, extendedCompletion);
+        propertyRegistry.updateConstructionDates(address(propertyToken), extendedStart, extendedCompletion);
         
         // Verificar extensión
-        (, , , , , , uint256 newStart, uint256 newCompletion, , , , , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , uint256 newStart, uint256 newCompletion, , , , , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         
         assertEq(newStart, extendedStart, "Start date should be extended");
         assertEq(newCompletion, extendedCompletion, "Completion date should be extended");
@@ -450,16 +450,16 @@ contract UpdateConstructionDatesTest is BaseTest {
         whenDatesAreValidAndStatusAllowsUpdates 
     {
         // Obtener fechas actuales
-        (, , , , , , uint256 currentStart, uint256 currentCompletion, , , , , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , uint256 currentStart, uint256 currentCompletion, , , , , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         
         vm.expectEmit(true, false, false, true, address(propertyRegistry));
-        emit ConstructionDatesUpdated(mockToken, currentStart, currentCompletion);
+        emit ConstructionDatesUpdated(address(propertyToken), currentStart, currentCompletion);
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateConstructionDates(mockToken, currentStart, currentCompletion);
+        propertyRegistry.updateConstructionDates(address(propertyToken), currentStart, currentCompletion);
         
         // Verificar que siguen igual (idempotencia)
-        (, , , , , , uint256 newStart, uint256 newCompletion, , , , , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , uint256 newStart, uint256 newCompletion, , , , , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         
         assertEq(newStart, currentStart, "Start date should remain the same");
         assertEq(newCompletion, currentCompletion, "Completion date should remain the same");

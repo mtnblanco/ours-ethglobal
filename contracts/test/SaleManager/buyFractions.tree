@@ -1,0 +1,29 @@
+BuyFractionsTest
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+├── when the sale does not exist
+│   └── it should revert with SaleDoesNotExist
+├── when the sale exists but is not active
+│   └── it should revert with SaleNotActive
+├── when the sale is active
+│   ├── when the amount is zero
+│   │   └── it should revert with InvalidAmount
+│   ├── when the buyer has insufficient USDC balance
+│   │   └── it should revert with InsufficientBalance
+│   ├── when the buyer has sufficient balance but insufficient approval
+│   │   └── it should revert with ERC20InsufficientAllowance
+│   └── when the buyer has sufficient balance and approval
+│       ├── it should transfer USDC from buyer to contract
+│       ├── it should mint property tokens to buyer
+│       ├── it should update totalRaised correctly
+│       ├── it should update withdrawableBalance for issuer
+│       ├── it should accumulate platform fees
+│       ├── it should emit TokensPurchased event
+│       ├── when making multiple purchases
+│       │   ├── it should accumulate totalRaised across purchases
+│       │   ├── it should accumulate platform fees across purchases
+│       │   └── it should allow multiple buyers
+│       └── when calculating fees
+│           ├── it should calculate platform fee correctly (5%)
+│           └── it should split payment between issuer and platform correctly
+

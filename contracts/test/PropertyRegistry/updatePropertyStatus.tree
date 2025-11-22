@@ -1,0 +1,81 @@
+UpdatePropertyStatusTest
+├── when the property does not exist
+│   └── it should revert with PropertyDoesNotExist
+├── when the property exists
+│   ├── when the caller is neither verifier nor property issuer
+│   │   └── it should revert with NotPropertyIssuer
+│   ├── when the caller is the property issuer or verifier
+│   │   ├── when the contract is paused
+│   │   │   └── it should revert with EnforcedPause
+│   │   └── when the contract is not paused
+│   │       ├── VALID TRANSITIONS - FROM PLANNING
+│   │       │   ├── when transitioning from Planning to InConstruction
+│   │       │   │   ├── it should update the status
+│   │       │   │   └── it should emit PropertyStatusUpdated event
+│   │       │   └── when transitioning from Planning to Cancelled
+│   │       │       ├── it should update the status
+│   │       │       └── it should emit PropertyStatusUpdated event
+│   │       ├── INVALID TRANSITIONS - FROM PLANNING
+│   │       │   ├── when trying Planning to Planning (same state)
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   ├── when trying Planning to Completed (skip state)
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   └── when trying Planning to Sold (skip states)
+│   │       │       └── it should revert with InvalidStatusTransition
+│   │       ├── VALID TRANSITIONS - FROM IN CONSTRUCTION
+│   │       │   ├── when transitioning from InConstruction to Completed
+│   │       │   │   ├── it should update the status
+│   │       │   │   ├── it should set actualCompletion timestamp
+│   │       │   │   ├── it should emit PropertyCompleted event
+│   │       │   │   └── it should emit PropertyStatusUpdated event
+│   │       │   └── when transitioning from InConstruction to Cancelled
+│   │       │       ├── it should update the status
+│   │       │       └── it should emit PropertyStatusUpdated event
+│   │       ├── INVALID TRANSITIONS - FROM IN CONSTRUCTION
+│   │       │   ├── when trying InConstruction to InConstruction (same state)
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   ├── when trying InConstruction to Planning (backwards)
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   └── when trying InConstruction to Sold (skip state)
+│   │       │       └── it should revert with InvalidStatusTransition
+│   │       ├── VALID TRANSITIONS - FROM COMPLETED
+│   │       │   └── when transitioning from Completed to Sold
+│   │       │       ├── it should update the status
+│   │       │       └── it should emit PropertyStatusUpdated event
+│   │       ├── INVALID TRANSITIONS - FROM COMPLETED
+│   │       │   ├── when trying Completed to Completed (same state)
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   ├── when trying Completed to Planning (backwards)
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   ├── when trying Completed to InConstruction (backwards)
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   └── when trying Completed to Cancelled (not allowed)
+│   │       │       └── it should revert with InvalidStatusTransition
+│   │       ├── INVALID TRANSITIONS - FROM SOLD (FINAL STATE)
+│   │       │   ├── when trying Sold to Planning
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   ├── when trying Sold to InConstruction
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   ├── when trying Sold to Completed
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   ├── when trying Sold to Sold (same state)
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   └── when trying Sold to Cancelled
+│   │       │       └── it should revert with InvalidStatusTransition
+│   │       ├── INVALID TRANSITIONS - FROM CANCELLED (FINAL STATE)
+│   │       │   ├── when trying Cancelled to Planning
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   ├── when trying Cancelled to InConstruction
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   ├── when trying Cancelled to Completed
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   ├── when trying Cancelled to Sold
+│   │       │   │   └── it should revert with InvalidStatusTransition
+│   │       │   └── when trying Cancelled to Cancelled (same state)
+│   │       │       └── it should revert with InvalidStatusTransition
+│   │       └── PERMISSION TESTS
+│   │           ├── when caller is verifier
+│   │           │   └── it should allow status updates
+│   │           └── when caller is issuer
+│   │               └── it should allow status updates
+

@@ -64,7 +64,7 @@ contract UpdateMetadataTest is BaseTest {
     {
         vm.prank(investor1); // investor1 no es el issuer
         vm.expectRevert(PropertyRegistry.NotPropertyIssuer.selector);
-        propertyRegistry.updateMetadata(mockToken, "QmNewHash");
+        propertyRegistry.updateMetadata(address(propertyToken), "QmNewHash");
     }
     
     /*//////////////////////////////////////////////////////////////
@@ -89,7 +89,7 @@ contract UpdateMetadataTest is BaseTest {
         
         vm.prank(propertyIssuer);
         vm.expectRevert("Pausable: paused");
-        propertyRegistry.updateMetadata(mockToken, "QmNewHash");
+        propertyRegistry.updateMetadata(address(propertyToken), "QmNewHash");
     }
     
     /*//////////////////////////////////////////////////////////////
@@ -111,11 +111,11 @@ contract UpdateMetadataTest is BaseTest {
     {
         // Desactivar la propiedad primero
         vm.prank(propertyIssuer);
-        propertyRegistry.setPropertyActive(mockToken, false);
+        propertyRegistry.setPropertyActive(address(propertyToken), false);
         
         vm.prank(propertyIssuer);
         vm.expectRevert(PropertyRegistry.PropertyNotActive.selector);
-        propertyRegistry.updateMetadata(mockToken, "QmNewHash");
+        propertyRegistry.updateMetadata(address(propertyToken), "QmNewHash");
     }
     
     /*//////////////////////////////////////////////////////////////
@@ -143,13 +143,13 @@ contract UpdateMetadataTest is BaseTest {
         string memory emptyHash = "";
         
         vm.expectEmit(true, false, false, true, address(propertyRegistry));
-        emit PropertyMetadataUpdated(mockToken, emptyHash);
+        emit PropertyMetadataUpdated(address(propertyToken), emptyHash);
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateMetadata(mockToken, emptyHash);
+        propertyRegistry.updateMetadata(address(propertyToken), emptyHash);
         
         // Verificar que se actualizó
-        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         assertEq(ipfsHash, emptyHash, "IPFS hash should be empty");
     }
     
@@ -163,16 +163,16 @@ contract UpdateMetadataTest is BaseTest {
         whenThePropertyIsActive 
     {
         // Obtener el hash actual
-        (, , , , , , , , , , string memory currentHash, , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , , , , , string memory currentHash, , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         
         vm.expectEmit(true, false, false, true, address(propertyRegistry));
-        emit PropertyMetadataUpdated(mockToken, currentHash);
+        emit PropertyMetadataUpdated(address(propertyToken), currentHash);
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateMetadata(mockToken, currentHash);
+        propertyRegistry.updateMetadata(address(propertyToken), currentHash);
         
         // Verificar que sigue igual (idempotencia)
-        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         assertEq(ipfsHash, currentHash, "IPFS hash should remain the same");
     }
     
@@ -188,10 +188,10 @@ contract UpdateMetadataTest is BaseTest {
         string memory newHash = "QmNewHashDifferentFromOriginal123456";
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateMetadata(mockToken, newHash);
+        propertyRegistry.updateMetadata(address(propertyToken), newHash);
         
         // Verificar actualización
-        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         assertEq(ipfsHash, newHash, "IPFS hash should be updated");
     }
     
@@ -207,10 +207,10 @@ contract UpdateMetadataTest is BaseTest {
         string memory newHash = "QmNewHashForEventTest";
         
         vm.expectEmit(true, false, false, true, address(propertyRegistry));
-        emit PropertyMetadataUpdated(mockToken, newHash);
+        emit PropertyMetadataUpdated(address(propertyToken), newHash);
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateMetadata(mockToken, newHash);
+        propertyRegistry.updateMetadata(address(propertyToken), newHash);
     }
     
     /// @dev when the new IPFS hash is different
@@ -232,7 +232,7 @@ contract UpdateMetadataTest is BaseTest {
         PropertyRegistry.PropertyStatus statusBefore;
         
         {
-            (, address _issuer, string memory _name, , uint256 _totalArea, uint256 _units, , , , PropertyRegistry.PropertyStatus _status, , , , , , , , ) = propertyRegistry.properties(mockToken);
+            (, address _issuer, string memory _name, , uint256 _totalArea, uint256 _units, , , , PropertyRegistry.PropertyStatus _status, , , , , , , , ) = propertyRegistry.properties(address(propertyToken));
             issuerBefore = _issuer;
             nameBefore = _name;
             totalAreaBefore = _totalArea;
@@ -242,10 +242,10 @@ contract UpdateMetadataTest is BaseTest {
         
         // Actualizar metadata
         vm.prank(propertyIssuer);
-        propertyRegistry.updateMetadata(mockToken, newHash);
+        propertyRegistry.updateMetadata(address(propertyToken), newHash);
         
         // Verificar preservación de campos clave
-        (, address issuerAfter, string memory nameAfter, , uint256 totalAreaAfter, uint256 unitsAfter, , , , PropertyRegistry.PropertyStatus statusAfter, string memory ipfsHashAfter, , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, address issuerAfter, string memory nameAfter, , uint256 totalAreaAfter, uint256 unitsAfter, , , , PropertyRegistry.PropertyStatus statusAfter, string memory ipfsHashAfter, , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         
         assertEq(issuerAfter, issuerBefore, "Issuer should not change");
         assertEq(nameAfter, nameBefore, "Name should not change");
@@ -270,9 +270,9 @@ contract UpdateMetadataTest is BaseTest {
         string memory newHash = "QmHashForPlanning";
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateMetadata(mockToken, newHash);
+        propertyRegistry.updateMetadata(address(propertyToken), newHash);
         
-        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         assertEq(ipfsHash, newHash, "Should update metadata in Planning status");
     }
     
@@ -285,14 +285,14 @@ contract UpdateMetadataTest is BaseTest {
     {
         // Cambiar a InConstruction
         vm.prank(verifier);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.InConstruction);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.InConstruction);
         
         string memory newHash = "QmHashForInConstruction";
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateMetadata(mockToken, newHash);
+        propertyRegistry.updateMetadata(address(propertyToken), newHash);
         
-        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         assertEq(ipfsHash, newHash, "Should update metadata in InConstruction status");
     }
     
@@ -305,16 +305,16 @@ contract UpdateMetadataTest is BaseTest {
     {
         // Transición correcta: Planning -> InConstruction -> Completed
         vm.startPrank(verifier);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.InConstruction);
-        propertyRegistry.updatePropertyStatus(mockToken, PropertyRegistry.PropertyStatus.Completed);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.InConstruction);
+        propertyRegistry.updatePropertyStatus(address(propertyToken), PropertyRegistry.PropertyStatus.Completed);
         vm.stopPrank();
         
         string memory newHash = "QmHashForCompleted";
         
         vm.prank(propertyIssuer);
-        propertyRegistry.updateMetadata(mockToken, newHash);
+        propertyRegistry.updateMetadata(address(propertyToken), newHash);
         
-        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(mockToken);
+        (, , , , , , , , , , string memory ipfsHash, , , , , , , ) = propertyRegistry.properties(address(propertyToken));
         assertEq(ipfsHash, newHash, "Should update metadata in Completed status");
     }
 }

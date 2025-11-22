@@ -322,7 +322,7 @@ contract RegisterPropertyTest is BaseTest {
             uint256 totalTokenSupply,
             uint256 totalInvestmentTarget,
             uint256 estimatedSalePrice
-        ) = propertyRegistry.properties(mockToken);
+        ) = propertyRegistry.properties(address(propertyToken));
         
         assertEq(token, params.token, "Token address mismatch");
         assertEq(issuer, propertyIssuer, "Issuer mismatch");
@@ -352,11 +352,11 @@ contract RegisterPropertyTest is BaseTest {
     {
         PropertyRegistry.PropertyParams memory params = _createValidPropertyParams();
         
-        assertFalse(propertyRegistry.propertyExists(mockToken), "Should not exist before");
+        assertFalse(propertyRegistry.propertyExists(address(propertyToken)), "Should not exist before");
         
         propertyRegistry.registerProperty(params);
         
-        assertTrue(propertyRegistry.propertyExists(mockToken), "Should exist after");
+        assertTrue(propertyRegistry.propertyExists(address(propertyToken)), "Should exist after");
     }
     
     /// @dev when all parameters are valid
@@ -389,7 +389,7 @@ contract RegisterPropertyTest is BaseTest {
         address[] memory issuerProps = propertyRegistry.getIssuerProperties(propertyIssuer);
         
         assertEq(issuerProps.length, 1, "Issuer should have 1 property");
-        assertEq(issuerProps[0], mockToken, "Token should be in issuer's properties");
+        assertEq(issuerProps[0], address(propertyToken), "Token should be in issuer's properties");
     }
     
     /// @dev when all parameters are valid
@@ -404,7 +404,7 @@ contract RegisterPropertyTest is BaseTest {
         
         address tokenFromCadastral = propertyRegistry.getTokenByCadastral(params.cadastralNumber);
         
-        assertEq(tokenFromCadastral, mockToken, "Cadastral number should map to token");
+        assertEq(tokenFromCadastral, address(propertyToken), "Cadastral number should map to token");
     }
     
     /// @dev when all parameters are valid
