@@ -14,6 +14,8 @@ import {
   Server 
 } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 // --- Animation Variants ---
 const fadeIn = {
@@ -27,6 +29,119 @@ const staggerContainer = {
 };
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  async function handleGetStarted() {
+    setIsVerifying(true);
+    setVerifyError(null);
+
+    try {
+      // Step 1: World ID verification for human proof
+      const mod: any = await import("@worldcoin/minikit-js");
+      const MiniKit = mod.MiniKit ?? mod.default ?? mod;
+      
+      if (!MiniKit) {
+        setVerifyError("MiniKit module unavailable");
+        setIsVerifying(false);
+        return;
+      }
+
+      // Ensure MiniKit is installed
+      try {
+        if (typeof MiniKit.install === "function") {
+          const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID;
+          const installRes = await MiniKit.install(appId);
+          
+          if (installRes && installRes.success === false && installRes.errorCode !== "already_installed") {
+            setVerifyError(installRes.errorMessage || `MiniKit.install failed: ${installRes.errorCode}`);
+            setIsVerifying(false);
+            return;
+          }
+        }
+      } catch (ie) {
+        setVerifyError(String(ie));
+        setIsVerifying(false);
+        return;
+      }
+
+      if (!MiniKit.commandsAsync || typeof MiniKit.commandsAsync.verify !== "function") {
+        setVerifyError("'verify' command is unavailable. Check MiniKit.install() or update the World App.");
+        setIsVerifying(false);
+        return;
+      }
+
+      // Execute World ID verification
+      const signal = typeof window !== "undefined" ? window.location.href : "signup";
+      const payload = { action: "signup", signal };
+
+      const resp = await MiniKit.commandsAsync.verify(payload);
+      
+      if (resp?.finalPayload?.status === "success") {
+        // Step 2: Request KYC with World ID proof
+        await requestKYCWithWorldID(resp.finalPayload);
+      } else {
+        setVerifyError("World ID verification failed or was cancelled");
+        setIsVerifying(false);
+      }
+    } catch (err) {
+      console.error("Verification error:", err);
+      setVerifyError(String(err));
+      setIsVerifying(false);
+    }
+  }
+
+  async function requestKYCWithWorldID(worldIdProof: any) {
+    try {
+      // Get user's wallet address if available
+      let userAddress = "0x0000000000000000000000000000000000000000";
+      
+      // Try to get wallet address from Web3 provider
+      if (typeof window !== "undefined" && (window as any).ethereum) {
+        try {
+          const accounts = await (window as any).ethereum.request({ 
+            method: 'eth_requestAccounts' 
+          });
+          if (accounts && accounts.length > 0) {
+            userAddress = accounts[0];
+          }
+        } catch (walletError) {
+          console.warn("Could not connect to wallet:", walletError);
+          // Continue without wallet address - the contract will handle this
+        }
+      }
+
+      // Send World ID proof to backend for KYC processing
+      // Following MiniKit documentation format
+      const response = await fetch('http://localhost:8000/api/v1/kyc/worldid', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          payload: worldIdProof, // Send the complete payload from MiniKit
+          action: "signup",
+          signal: typeof window !== "undefined" ? window.location.href : "signup",
+          user_address: userAddress
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // KYC initiated successfully, redirect to complete profile
+        router.push('/register?kyc_initiated=true&tx_hash=' + (result.transaction_hash || ''));
+      } else {
+        setVerifyError(result.error || "KYC initiation failed");
+        setIsVerifying(false);
+      }
+    } catch (error) {
+      console.error("KYC request error:", error);
+      setVerifyError("Failed to initiate KYC process");
+      setIsVerifying(false);
+    }
+  }
   return (
     <main className="min-h-screen bg-brand-dark text-brand-light font-sans selection:bg-brand-primary selection:text-brand-dark overflow-x-hidden">
       
@@ -45,9 +160,13 @@ export default function LandingPage() {
           </div>
           <div className="flex gap-4">
             <Link href="/login" className="hidden sm:block text-sm font-medium text-brand-light hover:text-brand-primary py-2 px-4 transition-colors">Log in</Link>
-            <Link href="/register" className="text-sm font-bold bg-brand-primary text-brand-dark py-2 px-5 rounded-full hover:bg-brand-accent transition-all shadow-lg shadow-brand-primary/20">
-              Get Started
-            </Link>
+            <button 
+              onClick={handleGetStarted}
+              disabled={isVerifying}
+              className="text-sm font-bold bg-brand-primary text-brand-dark py-2 px-5 rounded-full hover:bg-brand-accent transition-all shadow-lg shadow-brand-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isVerifying ? "Verifying..." : "Get Started"}
+            </button>
           </div>
         </div>
       </nav>
@@ -74,14 +193,23 @@ export default function LandingPage() {
               ours is a Web3 platform enabling fractional investment in real properties via compliant security tokens. Fully regulated, transparent, and liquid.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/register" className="group flex justify-center items-center gap-2 bg-brand-light text-brand-dark px-8 py-4 rounded-lg font-bold hover:bg-brand-primary hover:text-brand-dark transition-colors">
-                Start Investing
+              <button 
+                onClick={handleGetStarted}
+                disabled={isVerifying}
+                className="group flex justify-center items-center gap-2 bg-brand-light text-brand-dark px-8 py-4 rounded-lg font-bold hover:bg-brand-primary hover:text-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isVerifying ? "Verifying..." : "Start Investing"}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
+              </button>
               <Link href="#standards" className="flex justify-center items-center gap-2 px-8 py-4 rounded-lg font-bold text-brand-light border border-brand-primary/30 hover:bg-brand-primary/10 transition-colors">
                 Technical Specs
               </Link>
             </div>
+            {verifyError && (
+              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-red-400 text-sm">{verifyError}</p>
+              </div>
+            )}
           </motion.div>
 
           {/* Hero Visual */}

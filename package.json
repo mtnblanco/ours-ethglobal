@@ -1,0 +1,25 @@
+{
+  "name": "ours-ethglobal-monorepo",
+  "version": "1.0.0",
+  "description": "Ours Real Estate Platform - Complete Monorepo",
+  "scripts": {
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "backend:dev": "cd backend && npm run dev",
+    "frontend:dev": "cd ours-platform && npm run dev",
+    "backend:build": "cd backend && npm run build",
+    "frontend:build": "cd ours-platform && npm run build",
+    "install:all": "npm install && cd backend && npm install && cd ../ours-platform && npm install",
+    "start": "concurrently \"npm run backend:start\" \"npm run frontend:start\"",
+    "backend:start": "cd backend && npm start",
+    "frontend:start": "cd ours-platform && npm start"
+  },
+  "dependencies": {
+    "ethers": "^6.15.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": ["blockchain", "real-estate", "worldid", "next.js", "express"],
+  "author": "Ours Platform Team",
+  "license": "MIT"
+}
