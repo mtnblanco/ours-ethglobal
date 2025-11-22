@@ -1,6 +1,6 @@
-const { ethers } = require("hardhat");
-const fs = require("fs");
-const path = require("path");
+import { ethers } from "ethers";
+import fs from "fs";
+import path from "path";
 
 /**
  * Script para desplegar ChainlinkKYCIssuer a World Chain Sepolia
@@ -12,7 +12,12 @@ const path = require("path");
  * 4. Actualiza .env.local del frontend
  */
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  // Connection setup
+  const RPC_URL = "https://worldchain-sepolia.g.alchemy.com/v2/9LoW6D330D8KHv0K-u-yB";
+  const PRIVATE_KEY = "0x2354cb39ddac1304a8f63053ebae9ee558d95507bf6fc774087719855cb4f5b5";
+  
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
+  const deployer = new ethers.Wallet(PRIVATE_KEY, provider);
   
   console.log("🚀 Deploying ChainlinkKYCIssuer to World Chain Sepolia...");
   console.log("📝 Deploying with account:", deployer.address);
