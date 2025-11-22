@@ -110,8 +110,7 @@ const onKYCRequested = async (runtime: Runtime<Config>, event: KYCRequestedEvent
   
   runtime.log(`Calculated hash: ${hash}`);
   
-  // Paso 4: Determinar si está aprobado (result === "clear")
-  const approved = onfidoCheck.result === "clear";
+  // Paso 4: Ya tenemos approved desde la configuración (mocked)
   runtime.log(`KYC approved: ${approved}`);
   
   // Paso 5: Llamar fulfillKYC() en el contrato
@@ -123,7 +122,8 @@ const onKYCRequested = async (runtime: Runtime<Config>, event: KYCRequestedEvent
   const contractAbi = abiFile.abi;
   
   // Llamar la función fulfillKYC usando EVMClient
-  const evmClient = new cre.capabilities.EVMClient("worldchain-sepolia");
+  // Worldchain Sepolia chain selector: 5299555114858065850
+  const evmClient = new cre.capabilities.EVMClient(5299555114858065850n);
   
   const callContractRequest = {
     to: config.kycIssuerAddress,
@@ -149,7 +149,8 @@ const onKYCRequested = async (runtime: Runtime<Config>, event: KYCRequestedEvent
 // Inicializar el workflow
 const initWorkflow = async (config: Config) => {
   // Crear el trigger para el evento EVM KYCRequested
-  const evmClient = new cre.capabilities.EVMClient("worldchain-sepolia");
+  // Worldchain Sepolia chain selector: 5299555114858065850
+  const evmClient = new cre.capabilities.EVMClient(5299555114858065850n);
   
   // Cargar el ABI del contrato para el trigger
   const abiPath = "./abis/ChainlinkKYCIssuer.json";
