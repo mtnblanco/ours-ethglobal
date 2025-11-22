@@ -79,8 +79,12 @@ export default function LandingPage() {
       const resp = await MiniKit.commandsAsync.verify(payload);
       
       if (resp?.finalPayload?.status === "success") {
-        // Step 2: Request KYC with World ID proof
-        await requestKYCWithWorldID(resp.finalPayload);
+        // World ID verification successful! Redirect to marketplace
+        // For now, we skip KYC and go directly to marketplace
+        //await requestKYCWithWorldID(resp.finalPayload);
+        console.log("World ID verification successful:", resp.finalPayload);
+        setIsVerifying(false);
+        router.push('/marketplace');
       } else {
         setVerifyError("World ID verification failed or was cancelled");
         setIsVerifying(false);
@@ -92,6 +96,8 @@ export default function LandingPage() {
     }
   }
 
+  // KYC function - commented out for now, going directly to marketplace
+  /*
   async function requestKYCWithWorldID(worldIdProof: any) {
     try {
       // Get user's wallet address if available
@@ -142,6 +148,7 @@ export default function LandingPage() {
       setIsVerifying(false);
     }
   }
+  */
   return (
     <main className="min-h-screen bg-brand-dark text-brand-light font-sans selection:bg-brand-primary selection:text-brand-dark overflow-x-hidden">
       
