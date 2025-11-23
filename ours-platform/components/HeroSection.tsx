@@ -167,6 +167,11 @@ const HeroSection = () => {
                             {isVerifying ? "Verifying..." : "Start Investing"}
                             <ArrowRight size={20} />
                         </button>
+                        {verifyError && (
+                            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                <p className="text-red-400 text-sm">{verifyError}</p>
+                            </div>
+                        )}
                     </motion.div>
 
                     {/* Espacio vacío en la grilla para que el texto no ocupe todo el ancho en desktop */}
