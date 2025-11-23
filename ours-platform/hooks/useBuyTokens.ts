@@ -28,13 +28,21 @@ export function useBuyTokens() {
       setIsPending(true);
       setIsConfirmed(false);
 
-      if (!MiniKit.isInstalled()) {
-        throw new Error('MiniKit is not installed. Please use World App.');
+      // Check if MiniKit is installed safely
+      let miniKitInstalled = false;
+      try {
+        miniKitInstalled = MiniKit.isInstalled();
+      } catch (e) {
+        console.error('Failed to check MiniKit installation:', e);
+      }
+
+      if (!miniKitInstalled) {
+        throw new Error('MiniKit is not installed. Please open this app in World App to make purchases.');
       }
 
       // Check if sendTransaction is available
       if (!MiniKit.commandsAsync?.sendTransaction) {
-        throw new Error('MiniKit sendTransaction is not available. Please update World App.');
+        throw new Error('MiniKit sendTransaction is not available. Please update World App to the latest version.');
       }
 
       // Calculate total cost in USDC (pricePerToken is in 6 decimals for USDC)

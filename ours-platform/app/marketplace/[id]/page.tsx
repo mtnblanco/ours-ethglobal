@@ -120,7 +120,15 @@ export default function PropertyDetailPage() {
     const handleBuyTokens = async () => {
         // Check if in MiniKit environment
         if (!isMiniKit) {
-            alert('Please open this app in World App to invest');
+            alert(
+                '🌍 World App Required\n\n' +
+                'To make investments, you need to open this app inside World App.\n\n' +
+                'Steps:\n' +
+                '1. Open World App on your phone\n' +
+                '2. Go to Mini Apps section\n' +
+                '3. Enter the app URL or scan QR code\n\n' +
+                'Currently browsing in regular browser - transactions are not available.'
+            );
             return;
         }
 

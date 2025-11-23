@@ -17,8 +17,15 @@ export function useMiniKitAuth() {
     error: null,
   });
 
-  // Check if running in MiniKit environment
-  const isMiniKit = typeof window !== 'undefined' && MiniKit.isInstalled();
+  // Check if running in MiniKit environment (safely)
+  const isMiniKit = typeof window !== 'undefined' && (() => {
+    try {
+      return MiniKit.isInstalled();
+    } catch (e) {
+      console.warn('MiniKit.isInstalled() failed:', e);
+      return false;
+    }
+  })();
 
   // Authenticate with World App
   const authenticate = useCallback(async () => {
