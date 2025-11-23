@@ -1,22 +1,44 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPublicClient, http } from 'viem';
 import { useWorldID } from './useWorldID';
+import {
+  CONTRACT_ADDRESSES,
+  PROPERTY_REGISTRY_ABI,
+  SALE_MANAGER_ABI,
+  NETWORK_CONFIG
+} from '@/lib/contracts';
 
-// Mock data types for demo
+// Types for blockchain data
 interface Property {
   token: string;
+  issuer: string;
   name: string;
   location: string;
-  totalInvestmentTarget: bigint;
+  totalArea: bigint;
+  units: bigint;
+  constructionStart: bigint;
+  estimatedCompletion: bigint;
+  actualCompletion: bigint;
+  status: number;
+  ipfsHash: string;
+  cadastralNumber: string;
+  legalOwner: string;
+  registeredAt: bigint;
+  isActive: boolean;
   totalTokenSupply: bigint;
+  totalInvestmentTarget: bigint;
+  estimatedSalePrice: bigint;
 }
 
 interface Sale {
   token: string;
+  issuer: string;
   pricePerToken: bigint;
-  totalRaised: bigint;
   isActive: boolean;
+  totalRaised: bigint;
+  withdrawableBalance: bigint;
 }
 
 interface PropertyWithSale {
@@ -24,6 +46,11 @@ interface PropertyWithSale {
   sale: Sale;
   saleIsActive: boolean;
 }
+
+// Create viem public client for reading from blockchain
+const publicClient = createPublicClient({
+  transport: http(NETWORK_CONFIG.rpcUrl),
+});
 
 // Web3 hook using World ID
 export function useWeb3() {
@@ -38,7 +65,7 @@ export function useWeb3() {
   };
 }
 
-// Property marketplace hook
+// Property marketplace hook - NOW WITH REAL BLOCKCHAIN DATA
 export function usePropertyMarketplace() {
   const { isConnected } = useWeb3();
   const worldID = useWorldID();
@@ -46,54 +73,101 @@ export function usePropertyMarketplace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getMockProperties = (): PropertyWithSale[] => {
-    return [
-      {
-        property: {
-          token: '0x9174c2eAf7F3db2642c24319Edc3af8708465FB0',
-          name: 'Luxury Apartment Complex - Bogotá',
-          location: 'Chapinero, Bogotá, Colombia',
-          totalInvestmentTarget: BigInt(250000000000), // $250,000 USDC (6 decimals)
-          totalTokenSupply: BigInt(1000),
-        },
-        sale: {
-          token: '0x9174c2eAf7F3db2642c24319Edc3af8708465FB0',
-          pricePerToken: BigInt(250000000), // $250 USDC per token
-          totalRaised: BigInt(50000000000), // $50,000 raised
-          isActive: true,
-        },
-        saleIsActive: true
-      },
-      {
-        property: {
-          token: '0x6916Bf9dBc14e2a50e2c70Eb5efe684eA1d94cA5',
-          name: 'Modern Office Tower - Medellín',
-          location: 'El Poblado, Medellín, Colombia',
-          totalInvestmentTarget: BigInt(500000000000), // $500,000 USDC
-          totalTokenSupply: BigInt(2000),
-        },
-        sale: {
-          token: '0x6916Bf9dBc14e2a50e2c70Eb5efe684eA1d94cA5',
-          pricePerToken: BigInt(250000000), // $250 USDC per token
-          totalRaised: BigInt(125000000000), // $125,000 raised
-          isActive: true,
-        },
-        saleIsActive: true
-      }
-    ];
+  /**
+   * Fetch all active sales from the SaleManager contract
+   */
+  const fetchActiveSales = async (): Promise<string[]> => {
+    try {
+      console.log('📡 Fetching active sales from SaleManager...');
+      console.log('📍 SaleManager address:', CONTRACT_ADDRESSES.SALE_MANAGER);
+
+      const activeSales = await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.SALE_MANAGER as `0x${string}`,
+        abi: SALE_MANAGER_ABI,
+        functionName: 'getActiveSales',
+      }) as string[];
+
+      console.log(`✅ Found ${activeSales.length} active sales`);
+      return activeSales;
+    } catch (err) {
+      console.error('❌ Error fetching active sales:', err);
+      throw err;
+    }
   };
 
+  /**
+   * Fetch property and sale information for a specific token
+   */
+  const fetchPropertyAndSaleInfo = async (tokenAddress: string): Promise<PropertyWithSale> => {
+    try {
+      console.log(`📋 Fetching info for property: ${tokenAddress}`);
+
+      // Call getPropertyAndSaleInfo from SaleManager
+      // This returns: (Property property, Sale sale, bool saleIsActive)
+      const result = await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.SALE_MANAGER as `0x${string}`,
+        abi: SALE_MANAGER_ABI,
+        functionName: 'getPropertyAndSaleInfo',
+        args: [tokenAddress as `0x${string}`],
+      }) as [Property, Sale, boolean];
+
+      const [property, sale, saleIsActive] = result;
+
+      console.log(`✅ Property: ${property.name}`);
+      console.log(`   Location: ${property.location}`);
+      console.log(`   Price: ${formatUSDC(sale.pricePerToken)} USDC per token`);
+      console.log(`   Raised: ${formatUSDC(sale.totalRaised)} USDC`);
+
+      return {
+        property,
+        sale,
+        saleIsActive,
+      };
+    } catch (err) {
+      console.error(`❌ Error fetching property ${tokenAddress}:`, err);
+      throw err;
+    }
+  };
+
+  /**
+   * Main function to fetch all properties from blockchain
+   */
   const fetchProperties = async () => {
     setLoading(true);
+    setError(null);
+
     try {
-      console.log('🔗 Loading demo properties');
-      const mockProps = getMockProperties();
-      setProperties(mockProps);
+      console.log('🚀 Starting to fetch properties from World Chain Sepolia...');
+      console.log('🌐 RPC URL:', NETWORK_CONFIG.rpcUrl);
+      console.log('📍 Contract addresses:', CONTRACT_ADDRESSES);
+
+      // Step 1: Get all active sales
+      const activeSaleTokens = await fetchActiveSales();
+
+      if (activeSaleTokens.length === 0) {
+        console.log('⚠️  No active sales found');
+        setProperties([]);
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Fetch detailed info for each property
+      console.log(`📊 Fetching details for ${activeSaleTokens.length} properties...`);
+
+      const propertiesData = await Promise.all(
+        activeSaleTokens.map(tokenAddress => fetchPropertyAndSaleInfo(tokenAddress))
+      );
+
+      console.log(`✅ Successfully loaded ${propertiesData.length} properties from blockchain`);
+      setProperties(propertiesData);
       setLoading(false);
+
     } catch (err) {
-      console.error('Failed to fetch properties:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch properties');
+      console.error('❌ Failed to fetch properties from blockchain:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch properties from blockchain');
       setLoading(false);
+
+      // Don't set empty array on error, keep previous data if available
     }
   };
 
@@ -104,10 +178,11 @@ export function usePropertyMarketplace() {
 
     try {
       console.log(`🛒 Purchasing ${amount} tokens of ${tokenAddress}`);
-      
-      // Simulate transaction
+
+      // TODO: Implement real transaction via MiniKit
+      // For now, just simulate
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       console.log('✅ Purchase successful!');
       return 'mock_transaction_hash';
     } catch (err) {

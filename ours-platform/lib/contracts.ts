@@ -27,21 +27,120 @@ export const PROPERTY_REGISTRY_ABI = [
 // SaleManager ABI (minimal for marketplace use)
 export const SALE_MANAGER_ABI = [
   // View functions
-  "function getSale(address token) external view returns (tuple(address token, address issuer, uint256 pricePerToken, bool isActive, uint256 totalRaised, uint256 withdrawableBalance) sale)",
-  "function sales(address token) external view returns (address token, address issuer, uint256 pricePerToken, bool isActive, uint256 totalRaised, uint256 withdrawableBalance)",
-  "function calculateCost(address token, uint256 amount) external view returns (uint256 totalCost, uint256 platformFee, uint256 issuerAmount)",
-  "function isSaleActive(address token) external view returns (bool)",
-  "function getPropertyAndSaleInfo(address token) external view returns (tuple(address token, address issuer, string name, string location, uint256 totalArea, uint256 units, uint256 constructionStart, uint256 estimatedCompletion, uint256 actualCompletion, uint8 status, string ipfsHash, string cadastralNumber, address legalOwner, uint256 registeredAt, bool isActive, uint256 totalTokenSupply, uint256 totalInvestmentTarget, uint256 estimatedSalePrice) property, tuple(address token, address issuer, uint256 pricePerToken, bool isActive, uint256 totalRaised, uint256 withdrawableBalance) sale, bool saleIsActive)",
-  "function getIssuerActiveSales(address issuer) external view returns (address[] memory tokens)",
-  "function canCreateSale(address token) external view returns (bool isReady, string memory reason)",
-  "function getInvestmentProjection(address token, uint256 tokenAmount) external view returns (uint256 investmentCost, uint256 ownershipPercentageBps, uint256 estimatedReturn, uint256 estimatedROIBps)",
-
-  // Transaction functions
-  "function buyFractions(address token, uint256 amount) external",
-  
-  // Events
-  "event TokensPurchased(address indexed buyer, address indexed token, uint256 amount, uint256 totalCost, uint256 platformFee)"
-];
+  {
+    "inputs": [{"name": "token", "type": "address"}],
+    "name": "getSale",
+    "outputs": [{
+      "name": "sale",
+      "type": "tuple",
+      "components": [
+        {"name": "token", "type": "address"},
+        {"name": "issuer", "type": "address"},
+        {"name": "pricePerToken", "type": "uint256"},
+        {"name": "isActive", "type": "bool"},
+        {"name": "totalRaised", "type": "uint256"},
+        {"name": "withdrawableBalance", "type": "uint256"}
+      ]
+    }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getActiveSales",
+    "outputs": [{"name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllSales",
+    "outputs": [{"name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "token", "type": "address"}],
+    "name": "getPropertyAndSaleInfo",
+    "outputs": [
+      {
+        "name": "property",
+        "type": "tuple",
+        "components": [
+          {"name": "token", "type": "address"},
+          {"name": "issuer", "type": "address"},
+          {"name": "name", "type": "string"},
+          {"name": "location", "type": "string"},
+          {"name": "totalArea", "type": "uint256"},
+          {"name": "units", "type": "uint256"},
+          {"name": "constructionStart", "type": "uint256"},
+          {"name": "estimatedCompletion", "type": "uint256"},
+          {"name": "actualCompletion", "type": "uint256"},
+          {"name": "status", "type": "uint8"},
+          {"name": "ipfsHash", "type": "string"},
+          {"name": "cadastralNumber", "type": "string"},
+          {"name": "legalOwner", "type": "address"},
+          {"name": "registeredAt", "type": "uint256"},
+          {"name": "isActive", "type": "bool"},
+          {"name": "totalTokenSupply", "type": "uint256"},
+          {"name": "totalInvestmentTarget", "type": "uint256"},
+          {"name": "estimatedSalePrice", "type": "uint256"}
+        ]
+      },
+      {
+        "name": "sale",
+        "type": "tuple",
+        "components": [
+          {"name": "token", "type": "address"},
+          {"name": "issuer", "type": "address"},
+          {"name": "pricePerToken", "type": "uint256"},
+          {"name": "isActive", "type": "bool"},
+          {"name": "totalRaised", "type": "uint256"},
+          {"name": "withdrawableBalance", "type": "uint256"}
+        ]
+      },
+      {"name": "saleIsActive", "type": "bool"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "token", "type": "address"},
+      {"name": "amount", "type": "uint256"}
+    ],
+    "name": "calculateCost",
+    "outputs": [
+      {"name": "totalCost", "type": "uint256"},
+      {"name": "platformFee", "type": "uint256"},
+      {"name": "issuerAmount", "type": "uint256"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "token", "type": "address"},
+      {"name": "amount", "type": "uint256"}
+    ],
+    "name": "buyFractions",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "buyer", "type": "address"},
+      {"indexed": true, "name": "token", "type": "address"},
+      {"indexed": false, "name": "amount", "type": "uint256"},
+      {"indexed": false, "name": "totalCost", "type": "uint256"},
+      {"indexed": false, "name": "platformFee", "type": "uint256"}
+    ],
+    "name": "TokensPurchased",
+    "type": "event"
+  }
+] as const;
 
 // RevenueDistributor ABI (minimal for marketplace use)
 export const REVENUE_DISTRIBUTOR_ABI = [
