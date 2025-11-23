@@ -3782,6 +3782,8 @@ var ListSchema = /* @__PURE__ */ messageDesc(file_values_v1_values, 3);
 var DecimalSchema = /* @__PURE__ */ messageDesc(file_values_v1_values, 4);
 var file_sdk_v1alpha_sdk = /* @__PURE__ */ fileDesc("ChVzZGsvdjFhbHBoYS9zZGsucHJvdG8SC3Nkay52MWFscGhhIrQBChVTaW1wbGVDb25zZW5zdXNJbnB1dHMSIQoFdmFsdWUYASABKAsyEC52YWx1ZXMudjEuVmFsdWVIABIPCgVlcnJvchgCIAEoCUgAEjUKC2Rlc2NyaXB0b3JzGAMgASgLMiAuc2RrLnYxYWxwaGEuQ29uc2Vuc3VzRGVzY3JpcHRvchIhCgdkZWZhdWx0GAQgASgLMhAudmFsdWVzLnYxLlZhbHVlQg0KC29ic2VydmF0aW9uIpABCglGaWVsZHNNYXASMgoGZmllbGRzGAEgAygLMiIuc2RrLnYxYWxwaGEuRmllbGRzTWFwLkZpZWxkc0VudHJ5Gk8KC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIvCgV2YWx1ZRgCIAEoCzIgLnNkay52MWFscGhhLkNvbnNlbnN1c0Rlc2NyaXB0b3I6AjgBIoYBChNDb25zZW5zdXNEZXNjcmlwdG9yEjMKC2FnZ3JlZ2F0aW9uGAEgASgOMhwuc2RrLnYxYWxwaGEuQWdncmVnYXRpb25UeXBlSAASLAoKZmllbGRzX21hcBgCIAEoCzIWLnNkay52MWFscGhhLkZpZWxkc01hcEgAQgwKCmRlc2NyaXB0b3IiagoNUmVwb3J0UmVxdWVzdBIXCg9lbmNvZGVkX3BheWxvYWQYASABKAwSFAoMZW5jb2Rlcl9uYW1lGAIgASgJEhQKDHNpZ25pbmdfYWxnbxgDIAEoCRIUCgxoYXNoaW5nX2FsZ28YBCABKAkilwEKDlJlcG9ydFJlc3BvbnNlEhUKDWNvbmZpZ19kaWdlc3QYASABKAwSEgoGc2VxX25yGAIgASgEQgIwABIWCg5yZXBvcnRfY29udGV4dBgDIAEoDBISCgpyYXdfcmVwb3J0GAQgASgMEi4KBHNpZ3MYBSADKAsyIC5zZGsudjFhbHBoYS5BdHRyaWJ1dGVkU2lnbmF0dXJlIjsKE0F0dHJpYnV0ZWRTaWduYXR1cmUSEQoJc2lnbmF0dXJlGAEgASgMEhEKCXNpZ25lcl9pZBgCIAEoDSJrChFDYXBhYmlsaXR5UmVxdWVzdBIKCgJpZBgBIAEoCRIlCgdwYXlsb2FkGAIgASgLMhQuZ29vZ2xlLnByb3RvYnVmLkFueRIOCgZtZXRob2QYAyABKAkSEwoLY2FsbGJhY2tfaWQYBCABKAUiWgoSQ2FwYWJpbGl0eVJlc3BvbnNlEicKB3BheWxvYWQYASABKAsyFC5nb29nbGUucHJvdG9idWYuQW55SAASDwoFZXJyb3IYAiABKAlIAEIKCghyZXNwb25zZSJYChNUcmlnZ2VyU3Vic2NyaXB0aW9uEgoKAmlkGAEgASgJEiUKB3BheWxvYWQYAiABKAsyFC5nb29nbGUucHJvdG9idWYuQW55Eg4KBm1ldGhvZBgDIAEoCSJVChpUcmlnZ2VyU3Vic2NyaXB0aW9uUmVxdWVzdBI3Cg1zdWJzY3JpcHRpb25zGAEgAygLMiAuc2RrLnYxYWxwaGEuVHJpZ2dlclN1YnNjcmlwdGlvbiJACgdUcmlnZ2VyEg4KAmlkGAEgASgEQgIwABIlCgdwYXlsb2FkGAIgASgLMhQuZ29vZ2xlLnByb3RvYnVmLkFueSInChhBd2FpdENhcGFiaWxpdGllc1JlcXVlc3QSCwoDaWRzGAEgAygFIrgBChlBd2FpdENhcGFiaWxpdGllc1Jlc3BvbnNlEkgKCXJlc3BvbnNlcxgBIAMoCzI1LnNkay52MWFscGhhLkF3YWl0Q2FwYWJpbGl0aWVzUmVzcG9uc2UuUmVzcG9uc2VzRW50cnkaUQoOUmVzcG9uc2VzRW50cnkSCwoDa2V5GAEgASgFEi4KBXZhbHVlGAIgASgLMh8uc2RrLnYxYWxwaGEuQ2FwYWJpbGl0eVJlc3BvbnNlOgI4ASKgAQoORXhlY3V0ZVJlcXVlc3QSDgoGY29uZmlnGAEgASgMEisKCXN1YnNjcmliZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAEicKB3RyaWdnZXIYAyABKAsyFC5zZGsudjFhbHBoYS5UcmlnZ2VySAASHQoRbWF4X3Jlc3BvbnNlX3NpemUYBCABKARCAjAAQgkKB3JlcXVlc3QimQEKD0V4ZWN1dGlvblJlc3VsdBIhCgV2YWx1ZRgBIAEoCzIQLnZhbHVlcy52MS5WYWx1ZUgAEg8KBWVycm9yGAIgASgJSAASSAoVdHJpZ2dlcl9zdWJzY3JpcHRpb25zGAMgASgLMicuc2RrLnYxYWxwaGEuVHJpZ2dlclN1YnNjcmlwdGlvblJlcXVlc3RIAEIICgZyZXN1bHQiVgoRR2V0U2VjcmV0c1JlcXVlc3QSLAoIcmVxdWVzdHMYASADKAsyGi5zZGsudjFhbHBoYS5TZWNyZXRSZXF1ZXN0EhMKC2NhbGxiYWNrX2lkGAIgASgFIiIKE0F3YWl0U2VjcmV0c1JlcXVlc3QSCwoDaWRzGAEgAygFIqsBChRBd2FpdFNlY3JldHNSZXNwb25zZRJDCglyZXNwb25zZXMYASADKAsyMC5zZGsudjFhbHBoYS5Bd2FpdFNlY3JldHNSZXNwb25zZS5SZXNwb25zZXNFbnRyeRpOCg5SZXNwb25zZXNFbnRyeRILCgNrZXkYASABKAUSKwoFdmFsdWUYAiABKAsyHC5zZGsudjFhbHBoYS5TZWNyZXRSZXNwb25zZXM6AjgBIi4KDVNlY3JldFJlcXVlc3QSCgoCaWQYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJIkUKBlNlY3JldBIKCgJpZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSDQoFb3duZXIYAyABKAkSDQoFdmFsdWUYBCABKAkiSgoLU2VjcmV0RXJyb3ISCgoCaWQYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJEg0KBW93bmVyGAMgASgJEg0KBWVycm9yGAQgASgJIm4KDlNlY3JldFJlc3BvbnNlEiUKBnNlY3JldBgBIAEoCzITLnNkay52MWFscGhhLlNlY3JldEgAEikKBWVycm9yGAIgASgLMhguc2RrLnYxYWxwaGEuU2VjcmV0RXJyb3JIAEIKCghyZXNwb25zZSJBCg9TZWNyZXRSZXNwb25zZXMSLgoJcmVzcG9uc2VzGAEgAygLMhsuc2RrLnYxYWxwaGEuU2VjcmV0UmVzcG9uc2UquAEKD0FnZ3JlZ2F0aW9uVHlwZRIgChxBR0dSRUdBVElPTl9UWVBFX1VOU1BFQ0lGSUVEEAASGwoXQUdHUkVHQVRJT05fVFlQRV9NRURJQU4QARIeChpBR0dSRUdBVElPTl9UWVBFX0lERU5USUNBTBACEiIKHkFHR1JFR0FUSU9OX1RZUEVfQ09NTU9OX1BSRUZJWBADEiIKHkFHR1JFR0FUSU9OX1RZUEVfQ09NTU9OX1NVRkZJWBAEKjkKBE1vZGUSFAoQTU9ERV9VTlNQRUNJRklFRBAAEgwKCE1PREVfRE9OEAESDQoJTU9ERV9OT0RFEAJCaAoPY29tLnNkay52MWFscGhhQghTZGtQcm90b1ABogIDU1hYqgILU2RrLlYxYWxwaGHKAgtTZGtcVjFhbHBoYeICF1Nka1xWMWFscGhhXEdQQk1ldGFkYXRh6gIMU2RrOjpWMWFscGhhYgZwcm90bzM", [file_google_protobuf_any, file_google_protobuf_empty, file_values_v1_values]);
 var SimpleConsensusInputsSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 0);
+var FieldsMapSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 1);
+var ConsensusDescriptorSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 2);
 var ReportRequestSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 3);
 var ReportResponseSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 4);
 var CapabilityRequestSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 6);
@@ -5649,6 +5651,28 @@ var LATEST_BLOCK_NUMBER = {
   absVal: Buffer.from([2]).toString("base64"),
   sign: "-1"
 };
+var decodeJson = (input) => {
+  const decoder = new TextDecoder("utf-8");
+  const textBody = decoder.decode(input);
+  return JSON.parse(textBody);
+};
+function json(responseOrFn) {
+  if (typeof responseOrFn === "function") {
+    return {
+      result: () => json(responseOrFn().result)
+    };
+  }
+  return decodeJson(responseOrFn.body);
+}
+function ok(responseOrFn) {
+  if (typeof responseOrFn === "function") {
+    return {
+      result: () => ok(responseOrFn().result)
+    };
+  } else {
+    return responseOrFn.statusCode >= 200 && responseOrFn.statusCode < 300;
+  }
+}
 function sendReport(runtime, report, fn) {
   const rawReport = report.x_generatedCodeOnly_unwrap();
   const request = fn(rawReport);
@@ -9197,6 +9221,57 @@ var testnetByNameByFamily = {
   ])
 };
 
+class ConsensusImpl {
+  descriptor;
+  defaultValue;
+  constructor(descriptor, defaultValue) {
+    this.descriptor = descriptor;
+    this.defaultValue = defaultValue;
+  }
+  withDefault(t) {
+    return new ConsensusImpl(this.descriptor, t);
+  }
+  _usesUToForceShape(_) {}
+}
+function simpleDescriptor(agg) {
+  return create(ConsensusDescriptorSchema, {
+    descriptor: {
+      case: "aggregation",
+      value: agg
+    }
+  });
+}
+function identical() {
+  return new ConsensusFieldAggregation(simpleDescriptor(AggregationType.IDENTICAL));
+}
+
+class ConsensusFieldAggregation {
+  fieldDescriptor;
+  t;
+  u;
+  constructor(fieldDescriptor, t, u) {
+    this.fieldDescriptor = fieldDescriptor;
+    this.t = t;
+    this.u = u;
+  }
+}
+function ConsensusAggregationByFields(aggregation) {
+  const fieldMap = create(FieldsMapSchema);
+  Object.keys(aggregation).forEach((key) => {
+    const fieldFn = aggregation[key];
+    const fieldAggregation = fieldFn();
+    if (fieldAggregation.fieldDescriptor) {
+      fieldMap.fields[key] = fieldAggregation.fieldDescriptor;
+    }
+  });
+  return new ConsensusImpl(create(ConsensusDescriptorSchema, {
+    descriptor: {
+      case: "fieldsMap",
+      value: fieldMap
+    }
+  }));
+}
+
 class Int64 {
   static INT64_MIN = -(2n ** 63n);
   static INT64_MAX = 2n ** 63n - 1n;
@@ -9807,8 +9882,8 @@ var ZodIssueCode = util.arrayToEnum([
   "not_finite"
 ]);
 var quotelessJson = (obj) => {
-  const json = JSON.stringify(obj, null, 2);
-  return json.replace(/"([^"]+)":/g, "$1:");
+  const json2 = JSON.stringify(obj, null, 2);
+  return json2.replace(/"([^"]+)":/g, "$1:");
 };
 
 class ZodError extends Error {
@@ -15253,90 +15328,114 @@ var ChainlinkKYCIssuer_default = {
   inputSourceName: "project/contracts/ChainlinkKYCIssuer.sol",
   buildInfoId: "solc-0_8_17-b5b987634554a7c2cb826e20ce95c10227a2b77e"
 };
-var onKYCRequested = async (runtime2, event) => {
-  const { user, nullifierHash, timestamp } = event;
-  const config = runtime2.getConfig();
-  runtime2.log(`Processing KYC request for user: ${user}, nullifierHash: ${nullifierHash}`);
-  let applicantId;
-  if (config.applicantIdLookupUrl && config.lookupApiToken) {
-    runtime2.log(`Fetching applicant ID from backend...`);
-    const applicantIdUrl = `${config.applicantIdLookupUrl}/${user}`;
-    const httpClient = new cre.capabilities.HTTPClient;
-    const applicantIdRequest = {
-      url: applicantIdUrl,
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${config.lookupApiToken}`,
-        "Content-Type": "application/json"
-      }
-    };
-    const applicantIdResponse = httpClient.sendRequest(runtime2, applicantIdRequest);
-    const applicantIdResult = await applicantIdResponse.result();
-    if (applicantIdResult.statusCode !== 200) {
-      throw new Error(`Failed to fetch applicant ID: ${applicantIdResult.statusCode}`);
-    }
-    const applicantData = JSON.parse(applicantIdResult.body);
-    applicantId = applicantData.applicantId;
-    if (!applicantId) {
-      throw new Error(`No applicant ID found for user: ${user}`);
-    }
-    runtime2.log(`Found applicant ID: ${applicantId}`);
-  } else {
-    applicantId = `mock-applicant-${user.slice(0, 10)}-${Date.now()}`;
-    runtime2.log(`Using mock applicant ID: ${applicantId}`);
+var fetchKYCVerification = (sendRequester, apiUrl, userAddress, authToken) => {
+  const headers = {
+    "Content-Type": "application/json"
+  };
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
   }
-  runtime2.log(`[MOCK] Checking Onfido status for applicant: ${applicantId}`);
-  const approved = config.mockOnfidoApproved !== undefined ? config.mockOnfidoApproved : true;
-  const onfidoCheck = {
-    id: applicantId,
-    status: "complete",
-    result: approved ? "clear" : "consider",
-    type: "express",
-    created_at: new Date().toISOString(),
-    result_url: `https://dashboard.onfido.com/checks/${applicantId}`,
-    href: `/v3/checks/${applicantId}`,
-    download_uri: `/v3/checks/${applicantId}/download`,
-    form_uri: null,
-    redirect_uri: null,
-    results_uri: null,
-    report_ids: approved ? ["report-1", "report-2"] : [],
-    document_ids: ["doc-1"],
-    privacy_notices_read_consent_given: true
-  };
-  runtime2.log(`[MOCK] Onfido check result: ${onfidoCheck.result} (${approved ? "APPROVED" : "REJECTED"})`);
-  const checkDataString = JSON.stringify(onfidoCheck);
-  const hash = keccak256(toUtf8Bytes(checkDataString));
-  runtime2.log(`Calculated hash: ${hash}`);
-  runtime2.log(`KYC approved: ${approved}`);
-  runtime2.log(`Calling fulfillKYC on contract: ${config.kycIssuerAddress}`);
-  const contractAbi = ChainlinkKYCIssuer_default.abi;
-  const evmClient = new cre.capabilities.EVMClient(5299555114858065850n);
-  const callContractRequest = {
-    to: config.kycIssuerAddress,
-    abi: contractAbi,
-    function: "fulfillKYC",
-    args: [user, approved, hash]
-  };
-  const txResponse = evmClient.callContract(runtime2, callContractRequest);
-  const txResult = await txResponse.result();
-  runtime2.log(`Transaction sent: ${txResult.transactionHash}`);
-  runtime2.log(`KYC fulfillment completed for user: ${user}`);
+  const response = sendRequester.sendRequest({
+    url: apiUrl,
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      email: `${userAddress.slice(0, 8)}@user.com`,
+      user_address: userAddress
+    })
+  }).result();
+  if (!ok(response)) {
+    throw new Error(`API devolvió ${response.statusCode}: ${response.body}`);
+  }
+  const data = json(response);
   return {
-    user,
-    approved,
-    hash,
-    transactionHash: txResult.transactionHash
+    isverified: data.isverified,
+    email: data.user?.email || "",
+    user_address: data.user?.user_address || userAddress
   };
 };
-var initWorkflow = async (config) => {
-  const evmClient = new cre.capabilities.EVMClient(5299555114858065850n);
-  const contractAbi = ChainlinkKYCIssuer_default.abi;
-  return [
-    cre.handler(evmClient.logTrigger({
-      contractAddress: config.kycIssuerAddress,
+async function verifyKYCWithAPI(runtime2, userAddress) {
+  const config = runtime2.config;
+  if (config.useMock) {
+    const approved = config.mockOnfidoApproved !== undefined ? config.mockOnfidoApproved : true;
+    runtime2.log(`[MOCK] KYC verification: ${approved ? "APPROVED" : "REJECTED"}`);
+    return {
+      isverified: approved,
+      email: `${userAddress.slice(0, 8)}@mock.com`,
+      user_address: userAddress
+    };
+  }
+  runtime2.log(`Verificando KYC con API para usuario: ${userAddress}`);
+  const httpClient = new cre.capabilities.HTTPClient;
+  const kycResult = await httpClient.sendRequest(runtime2, fetchKYCVerification, ConsensusAggregationByFields({
+    isverified: identical,
+    email: identical,
+    user_address: identical
+  }))(config.kycApiUrl, userAddress, config.kycApiToken).result();
+  runtime2.log(`KYC API Response: ${JSON.stringify(kycResult)}`);
+  return kycResult;
+}
+function hashKYCResult(apiResponse) {
+  const dataToHash = {
+    isverified: apiResponse.isverified,
+    email: apiResponse.email,
+    user_address: apiResponse.user_address,
+    timestamp: Math.floor(Date.now() / 1000)
+  };
+  const jsonStr = JSON.stringify(dataToHash);
+  const hashBytes = keccak256(toUtf8Bytes(jsonStr));
+  return hashBytes;
+}
+var onKYCRequested = async (runtime2, log) => {
+  const user = log.args[0];
+  const nullifierHash = log.args[1];
+  const timestamp = log.args[2];
+  runtime2.log(`
+--- Nueva solicitud KYC para ${user} ---`);
+  runtime2.log(`NullifierHash: ${nullifierHash}`);
+  runtime2.log(`Timestamp: ${timestamp}`);
+  try {
+    const kycResult = await verifyKYCWithAPI(runtime2, user);
+    const approved = kycResult.isverified;
+    runtime2.log(`KYC ${approved ? "APROBADO" : "RECHAZADO"} para ${user}`);
+    const hash = hashKYCResult(kycResult);
+    runtime2.log(`Hash del KYC: ${hash}`);
+    const config = runtime2.config;
+    const contractAbi = ChainlinkKYCIssuer_default.abi;
+    const worldchainSelector = 16015286601757825753n;
+    const evm = new cre.capabilities.EVMClient(worldchainSelector);
+    runtime2.log(`Llamando fulfillKYC en contrato ${config.kycIssuerAddress}`);
+    runtime2.log(`Parámetros: user=${user}, approved=${approved}, hash=${hash}`);
+    const callParams = {
+      address: config.kycIssuerAddress,
       abi: contractAbi,
-      eventName: "KYCRequested"
-    }), onKYCRequested)
+      function: "fulfillKYC",
+      args: [user, approved, hash]
+    };
+    const tx = await evm.callContract(runtime2, callParams).result();
+    runtime2.log(`Tx enviada → ${JSON.stringify(tx)}`);
+    runtime2.log(`KYC completado para ${user}`);
+    return {
+      user,
+      approved,
+      hash,
+      tx,
+      kycData: kycResult
+    };
+  } catch (error) {
+    runtime2.log(`ERROR en KYC para ${user}: ${error}`);
+    throw error;
+  }
+};
+var initWorkflow = async (config) => {
+  const worldchainSelector = 16015286601757825753n;
+  const evm = new cre.capabilities.EVMClient(worldchainSelector);
+  const contractAbi = ChainlinkKYCIssuer_default.abi;
+  const triggerConfig = {
+    addresses: [config.kycIssuerAddress]
+  };
+  return [
+    cre.handler(evm.logTrigger(triggerConfig), onKYCRequested)
   ];
 };
 async function main() {

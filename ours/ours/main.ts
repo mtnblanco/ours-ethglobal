@@ -46,7 +46,7 @@ const fetchKYCVerification = (
   authToken?: string
 ) => {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+      "Content-Type": "application/json",
   };
 
   if (authToken) {
@@ -95,7 +95,7 @@ async function verifyKYCWithAPI(
   if (config.useMock) {
     const approved = config.mockOnfidoApproved !== undefined ? config.mockOnfidoApproved : true;
     runtime.log(`[MOCK] KYC verification: ${approved ? "APPROVED" : "REJECTED"}`);
-    return {
+  return {
       isverified: approved,
       email: `${userAddress.slice(0, 8)}@mock.com`,
       user_address: userAddress,
@@ -162,17 +162,16 @@ const onKYCRequested = async (
     const approved = kycResult.isverified;
     runtime.log(`KYC ${approved ? "APROBADO" : "RECHAZADO"} para ${user}`);
 
-    // 3. Hashear resultado
+  // 3. Hashear resultado
     const hash = hashKYCResult(kycResult);
-    runtime.log(`Hash del KYC: ${hash}`);
+  runtime.log(`Hash del KYC: ${hash}`);
 
-    // 4. Enviar fulfillKYC() a tu contrato
+  // 4. Enviar fulfillKYC() a tu contrato
     const config = runtime.config;
-    const contractAbi = contractAbiJson.abi;
+  const contractAbi = contractAbiJson.abi;
 
-    const worldchainSelector = 5299555114858065850n;
-
-    const evm = new cre.capabilities.EVMClient(worldchainSelector);
+    const worldchainSelector = 16015286601757825753n;  // Sepolia para testing
+  const evm = new cre.capabilities.EVMClient(worldchainSelector);
 
     runtime.log(`Llamando fulfillKYC en contrato ${config.kycIssuerAddress}`);
     runtime.log(`Parámetros: user=${user}, approved=${approved}, hash=${hash}`);
@@ -184,19 +183,19 @@ const onKYCRequested = async (
       function: "fulfillKYC",
       args: [user, approved, hash],
     };
-    
+
     const tx = await evm.callContract(runtime as any, callParams).result();
 
     runtime.log(`Tx enviada → ${JSON.stringify(tx)}`);
-    runtime.log(`KYC completado para ${user}`);
+  runtime.log(`KYC completado para ${user}`);
 
-    return {
-      user,
-      approved,
-      hash,
+  return {
+    user,
+    approved,
+    hash,
       tx,
       kycData: kycResult,
-    };
+  };
   } catch (error) {
     runtime.log(`ERROR en KYC para ${user}: ${error}`);
     throw error;
@@ -208,14 +207,12 @@ const onKYCRequested = async (
 // TRIGGER + RUNNER
 // -------------------------
 const initWorkflow = async (config: Config) => {
-  const worldchainSelector = 5299555114858065850n;
+  const worldchainSelector = 16015286601757825753n;  // Sepolia para testing
   const evm = new cre.capabilities.EVMClient(worldchainSelector);
   const contractAbi = contractAbiJson.abi;
 
   const triggerConfig: any = {
     addresses: [config.kycIssuerAddress],
-    abi: contractAbi,
-    eventName: "KYCRequested",
   };
 
   return [

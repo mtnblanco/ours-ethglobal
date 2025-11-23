@@ -1,0 +1,41 @@
+# ==========================================================================
+# CRE PROJECT SETTINGS FILE
+# ==========================================================================
+# Project-specific settings for CRE CLI targets.
+# Each target defines cre-cli, account, and rpcs groups.
+#
+# Example custom target:
+# my-target:
+#   account:
+#     workflow-owner-address: "0x123..."            # Optional: Owner wallet/MSIG address (used for --unsigned transactions)
+#   rpcs:
+#     - chain-name: ethereum-testnet-sepolia        # Required if your workflow interacts with this chain
+#       url: "<select your own rpc url>"
+#     - chain-name: ethereum-mainnet                # Required if your workflow interacts with this chain
+#       url: "<select your own rpc url>"
+
+
+
+# ==========================================================================
+staging-settings:
+  account:
+    workflow-owner-address: "0xAbdFF83ac5E8E729C6ce44E938f244fB12F6Ce32"
+  rpcs:
+    - chain-name: ethereum-testnet-sepolia
+      url: https://ethereum-sepolia-rpc.publicnode.com
+    # World Chain Sepolia - chain ID 4801
+    - chain-name: worldchain-testnet-sepolia
+      chain-id: 4801
+      url: https://worldchain-sepolia.g.alchemy.com/v2/9LoW6D330D8KHv0K-u-yB
+
+# ==========================================================================
+production-settings:
+  account:
+    workflow-owner-address: "0xAbdFF83ac5E8E729C6ce44E938f244fB12F6Ce32"
+  rpcs:
+    - chain-name: ethereum-testnet-sepolia
+      url: https://ethereum-sepolia-rpc.publicnode.com
+    # World Chain Sepolia - chain ID 4801
+    - chain-name: worldchain-testnet-sepolia
+      chain-id: 4801
+      url: https://worldchain-sepolia.g.alchemy.com/v2/9LoW6D330D8KHv0K-u-yB
