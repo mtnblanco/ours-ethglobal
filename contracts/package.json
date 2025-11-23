@@ -12,12 +12,14 @@
     "clean": "hardhat clean"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
+    "@nomicfoundation/hardhat-ethers": "^3.1.2",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@types/node": "^22.19.1",
     "dotenv": "^16.3.1",
     "forge-std": "github:foundry-rs/forge-std#v1.9.7",
     "hardhat": "^3.0.15",
+    "solc": "^0.8.17",
     "typescript": "~5.8.0"
   },
   "dependencies": {

@@ -83,8 +83,8 @@ async function main() {
   );
   
   const propertyToken = await MockERC3643Factory.deploy(
-    "Skyline Tower Fractions",
-    "SKYLINE"
+    "Tito Baratito",
+    "BARATO"
   );
   await propertyToken.waitForDeployment();
   const tokenAddress = await propertyToken.getAddress();
@@ -96,7 +96,7 @@ async function main() {
   const propertyParams = {
     token: tokenAddress,
     issuer: wallet.address,
-    name: "Skyline Commercial Tower",
+    name: "TITO BARATITO",
     location: "Financial District, New York",
     totalArea: ethers.parseUnits("15000", 0),
     units: ethers.parseUnits("50", 0),

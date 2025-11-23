@@ -1,5 +1,5 @@
 import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-ethers";
+import "@nomicfoundation/hardhat-toolbox";
 import "dotenv/config";
 
 const config: HardhatUserConfig = {
@@ -55,6 +55,11 @@ const config: HardhatUserConfig = {
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 4801, // World Chain Sepolia testnet ID
       gasPrice: 100000000, // 0.1 gwei (reducido 200x) - súper barato para testnet
+    },
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 11155111, // Ethereum Sepolia testnet ID
     },
   },
 };

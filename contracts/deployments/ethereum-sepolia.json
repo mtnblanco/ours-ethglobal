@@ -1,0 +1,16 @@
+{
+  "network": "ethereum-sepolia",
+  "chainId": 11155111,
+  "deployer": "0xbd73D31277d69d2b80556068dbfcf9C3b5B2fd0B",
+  "timestamp": "2025-11-23T09:40:28.832Z",
+  "contracts": {
+    "MockIdentityRegistry": "0x6cABc7D7aFD996c94cA42Fc329c062FeD8d1F993",
+    "ChainlinkKYCIssuer": "0xBcB124082A8B25040Db883d7C1A7986099d609F6"
+  },
+  "config": {
+    "worldIdRouter": "0x0000000000000000000000000000000000000001",
+    "worldAppId": "test-app-sepolia",
+    "worldActionId": "test-kyc-verification",
+    "identityRegistry": "0x6cABc7D7aFD996c94cA42Fc329c062FeD8d1F993"
+  }
+}
