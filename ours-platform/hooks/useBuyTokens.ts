@@ -49,6 +49,12 @@ export function useBuyTokens() {
       const totalCost = (tokenAmount * pricePerToken) / BigInt(10 ** 18); // Convert from 18 decimals to raw amount
 
       console.log('🚀 Starting token purchase...');
+      console.log('📝 Environment Variables:', {
+        USDC_ADDRESS: process.env.NEXT_PUBLIC_USDC_ADDRESS,
+        SALE_MANAGER: process.env.NEXT_PUBLIC_SALE_MANAGER_ADDRESS,
+        CHAIN_ID: process.env.NEXT_PUBLIC_CHAIN_ID,
+        RPC_URL: process.env.NEXT_PUBLIC_RPC_URL,
+      });
       console.log('Buying tokens:', {
         propertyAddress,
         tokenAmount: tokenAmount.toString(),

@@ -75,22 +75,23 @@ export function usePropertyMarketplace() {
 
   /**
    * Fetch all active sales from the SaleManager contract
+   * NOTE: This function is not used - we use PropertyRegistry.getAllProperties() instead
    */
   const fetchActiveSales = async (): Promise<string[]> => {
     try {
-      console.log('📡 Fetching active sales from SaleManager...');
-      console.log('📍 SaleManager address:', CONTRACT_ADDRESSES.SALE_MANAGER);
+      console.log('📡 Fetching active properties from PropertyRegistry...');
+      console.log('📍 PropertyRegistry address:', CONTRACT_ADDRESSES.PROPERTY_REGISTRY);
 
-      const activeSales = await publicClient.readContract({
-        address: CONTRACT_ADDRESSES.SALE_MANAGER as `0x${string}`,
-        abi: SALE_MANAGER_ABI,
-        functionName: 'getActiveSales',
-      }) as string[];
+      const activeProperties = await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.PROPERTY_REGISTRY as `0x${string}`,
+        abi: PROPERTY_REGISTRY_ABI,
+        functionName: 'getAllProperties',
+      }) as unknown as string[];
 
-      console.log(`✅ Found ${activeSales.length} active sales`);
-      return activeSales;
+      console.log(`✅ Found ${activeProperties.length} active properties`);
+      return activeProperties;
     } catch (err) {
-      console.error('❌ Error fetching active sales:', err);
+      console.error('❌ Error fetching active properties:', err);
       throw err;
     }
   };

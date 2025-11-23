@@ -418,6 +418,36 @@ export default function PropertyDetailPage() {
                                                 {isLoadingBalance ? '...' : `$${usdcBalance}`}
                                             </span>
                                         </div>
+                                        {userAddress && parseFloat(usdcBalance) === 0 && (
+                                            <div className="mt-2 pt-2 border-t border-[#1E2046]/10">
+                                                <p className="text-xs text-[#1E2046]/60 mb-1">Need testnet USDC?</p>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={userAddress}
+                                                        readOnly
+                                                        className="text-xs font-mono bg-white px-2 py-1 rounded border border-[#1E2046]/20 flex-1"
+                                                    />
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(userAddress);
+                                                            alert('Address copied!');
+                                                        }}
+                                                        className="px-2 py-1 bg-[#2D2E63] text-[#B0CBFF] rounded text-xs font-semibold hover:bg-[#1E2046]"
+                                                    >
+                                                        Copy
+                                                    </button>
+                                                </div>
+                                                <a
+                                                    href="https://faucet.circle.com/"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="mt-2 inline-block text-xs text-blue-600 hover:underline"
+                                                >
+                                                    → Get USDC from Circle Faucet (Select World Chain Sepolia)
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {buyError && (

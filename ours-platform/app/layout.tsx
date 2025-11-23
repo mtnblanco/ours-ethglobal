@@ -34,6 +34,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Debug script for wallet diagnostics */}
+        <script src="/debug-wallet.js" defer />
+      </head>
       <body className={`${gothic.variable} font-sans antialiased`}>
         <Web3Provider>
           <AuthProvider>

@@ -4,52 +4,29 @@ import { Address, parseUnits } from 'viem';
 
 /**
  * Hook to check if a sale is active
+ * NOTE: Not used - we use MiniKit for transactions
  */
 export function useIsSaleActive(tokenAddress: Address | undefined) {
-  const { data, isLoading, error } = useReadContract({
-    address: CONTRACT_ADDRESSES.SALE_MANAGER as Address,
-    abi: SALE_MANAGER_ABI,
-    functionName: 'isSaleActive',
-    args: tokenAddress ? [tokenAddress] : undefined,
-  });
-
+  // This function is not implemented as the ABI doesn't include isSaleActive
+  // Sale status is checked via getPropertyAndSaleInfo instead
   return {
-    isActive: data as boolean | undefined,
-    isLoading,
-    error,
+    isActive: undefined as boolean | undefined,
+    isLoading: false,
+    error: new Error('Not implemented - use getPropertyAndSaleInfo instead'),
   };
 }
 
 /**
  * Hook to calculate the cost of buying tokens
+ * NOTE: Not used - we calculate cost manually in the component
  */
 export function useCalculateCost(tokenAddress: Address | undefined, amount: bigint | undefined) {
-  const { data, isLoading, error } = useReadContract({
-    address: CONTRACT_ADDRESSES.SALE_MANAGER as Address,
-    abi: SALE_MANAGER_ABI,
-    functionName: 'calculateCost',
-    args: tokenAddress && amount ? [tokenAddress, amount] : undefined,
-  });
-
-  let cost: {
-    totalCost: bigint;
-    platformFee: bigint;
-    issuerAmount: bigint;
-  } | undefined;
-
-  if (data) {
-    const [totalCost, platformFee, issuerAmount] = data as [bigint, bigint, bigint];
-    cost = {
-      totalCost,
-      platformFee,
-      issuerAmount,
-    };
-  }
-
+  // This function is not implemented as the ABI doesn't include calculateCost
+  // Cost is calculated manually: (tokenAmount * pricePerToken) / 10^18
   return {
-    cost,
-    isLoading,
-    error,
+    cost: undefined,
+    isLoading: false,
+    error: new Error('Not implemented - calculate cost manually'),
   };
 }
 

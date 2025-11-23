@@ -119,6 +119,40 @@ export default function HoldingsPage() {
             >
               <h1 className="text-4xl md:text-5xl font-bold text-[#1E2046] mb-2">My Holdings</h1>
               <p className="text-lg text-[#1E2046]/60">Track your real estate token portfolio</p>
+
+              {/* Wallet Address Display */}
+              {userAddress && (
+                <div className="mt-4 p-4 bg-white rounded-xl border-2 border-black">
+                  <p className="text-sm text-[#1E2046]/60 mb-1">Your Wallet Address:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-sm font-mono text-[#2D2E63] bg-[#E8F4FD] px-3 py-1 rounded">
+                      {userAddress}
+                    </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(userAddress);
+                        alert('Wallet address copied to clipboard!');
+                      }}
+                      className="px-3 py-1 bg-[#2D2E63] text-[#B0CBFF] rounded text-sm font-semibold hover:bg-[#1E2046]"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800 font-semibold mb-2">Need testnet USDC?</p>
+                    <ol className="text-xs text-yellow-700 space-y-1 ml-4 list-decimal">
+                      <li>Copy your wallet address above</li>
+                      <li>Visit: <a href="https://faucet.circle.com/" target="_blank" rel="noopener noreferrer" className="underline text-blue-600">Circle Testnet Faucet</a></li>
+                      <li>Select "World Chain Sepolia" network</li>
+                      <li>Paste your address and request USDC</li>
+                      <li>Wait 1-2 minutes for tokens to arrive</li>
+                    </ol>
+                    <p className="text-xs text-yellow-600 mt-2 italic">
+                      USDC Contract: {process.env.NEXT_PUBLIC_USDC_ADDRESS}
+                    </p>
+                  </div>
+                </div>
+              )}
             </motion.div>
 
             {/* Portfolio Overview */}
