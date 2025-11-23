@@ -1,0 +1,25 @@
+CreateSaleTest
+├── when the caller lacks PROPERTY_ISSUER_ROLE
+│   └── it should revert with AccessControlUnauthorizedAccount
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+└── when the caller has PROPERTY_ISSUER_ROLE and contract is not paused
+    ├── when the token address is zero
+    │   └── it should revert with InvalidToken
+    ├── when the price per token is zero
+    │   └── it should revert with InvalidPrice
+    ├── when a sale already exists for this token
+    │   └── it should revert with SaleAlreadyExists
+    ├── when the property is not registered in PropertyRegistry
+    │   └── it should revert with PropertyNotRegistered
+    ├── when the property is not available (cancelled or sold)
+    │   └── it should revert with PropertyNotAvailable
+    ├── when the caller is not the property issuer
+    │   └── it should revert with NotSaleIssuer
+    └── when all parameters are valid
+        ├── it should create the sale with correct data
+        ├── it should mark saleExists as true
+        ├── it should add the token to allSales array
+        ├── it should set isActive to true
+        └── it should emit SaleCreated event
+

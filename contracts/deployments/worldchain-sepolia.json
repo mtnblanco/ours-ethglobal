@@ -29,5 +29,9 @@
       "CHAINLINK_DON_ROLE"
     ]
   },
-  "lastRoleUpdate": "2025-11-22T18:51:00.466Z"
+  "lastRoleUpdate": "2025-11-22T18:51:00.466Z",
+  "worldcoin": {
+    "appId": "app_staging_b826d8b41fbc54b78b13e4f3b1b2f8e2",
+    "action": "ours-marketplace-login"
+  }
 }

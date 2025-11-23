@@ -1,0 +1,20 @@
+ClaimTest
+├── when the distribution does not exist
+│   └── it should revert with DistributionDoesNotExist
+├── when the distribution is not active
+│   └── it should revert with DistributionNotActive
+├── when the claim deadline has passed
+│   └── it should revert with ClaimDeadlinePassed
+├── when the user has already claimed
+│   └── it should revert with AlreadyClaimed
+├── when the merkle proof is invalid
+│   └── it should revert with InvalidProof
+├── when the amount is zero
+│   └── it should revert with InvalidAmount
+└── when all validations pass
+    ├── it should mark the user as having claimed
+    ├── it should transfer the correct amount to the holder
+    ├── it should update claimedAmount
+    ├── it should update remainingAmount
+    └── it should emit Claimed event
+
