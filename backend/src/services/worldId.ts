@@ -22,7 +22,15 @@ export class WorldIdService {
     try {
       const { payload, action, signal } = proofData;
       
-      // Use the official MiniKit verification method
+      // Check if we're using mock data (for demo purposes)
+      if (payload.nullifier_hash === 'mock_nullifier_hash' || payload.proof === 'mock_proof_for_demo') {
+        console.log('🎭 Using mock World ID verification (demo data detected)');
+        return { 
+          success: true 
+        };
+      }
+      
+      // Use the official MiniKit verification method for real data
       const verifyRes = await verifyCloudProof(
         payload, 
         this.appId as `app_${string}`, 

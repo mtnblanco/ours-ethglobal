@@ -39,7 +39,7 @@ export function useWorldID() {
         setUser({
           address: deployerAddress,
           verified: true, // Auto-verify for demo
-          nullifierHash: 'demo_nullifier_hash'
+          nullifierHash: 'mock_nullifier_hash'
         });
 
         setIsLoading(false);
@@ -65,7 +65,7 @@ export function useWorldID() {
         setUser({
           address: deployerAddress,
           verified: true,
-          nullifierHash: 'demo_nullifier_hash'
+          nullifierHash: 'mock_nullifier_hash'
         });
       }
       

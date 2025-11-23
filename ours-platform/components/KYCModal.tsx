@@ -45,6 +45,7 @@ export default function KYCModal({
   const [showPersonalInfoForm, setShowPersonalInfoForm] = useState(false);
   const [showOnfidoCapture, setShowOnfidoCapture] = useState(false);
   const [onfidoData, setOnfidoData] = useState<any>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     firstName: '',
@@ -154,7 +155,10 @@ export default function KYCModal({
 
     } catch (error) {
       console.error('❌ Error starting Onfido process:', error);
-      // Handle error appropriately
+      const message = error instanceof Error ? error.message : String(error);
+      // Store local error so UI can show backend details immediately
+      setLocalError(message);
+      // Also keep any existing parent error handling intact
     }
   };
 
@@ -186,156 +190,156 @@ export default function KYCModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-2 overflow-y-auto">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
       
-      {/* Modal */}
-      <div className="relative w-full max-w-md mx-4">
-        <div className="bg-brand-surface border border-brand-primary/20 rounded-xl shadow-xl">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-brand-primary/20">
+      {/* Modal - Optimized for mobile/miniapp */}
+      <div className="relative w-full max-w-sm mx-auto mt-2 mb-4">
+        <div className="bg-brand-surface border border-brand-primary/20 rounded-xl shadow-xl max-h-screen overflow-y-auto">
+          {/* Header - Compact */}
+          <div className="px-4 py-3 border-b border-brand-primary/20">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-brand-light">Complete KYC Verification</h2>
+              <h2 className="text-lg font-bold text-brand-light">KYC Verification</h2>
               <button
                 onClick={onClose}
-                className="text-brand-light/60 hover:text-brand-light transition-colors"
+                className="text-brand-light/60 hover:text-brand-light transition-colors p-1"
               >
                 ✕
               </button>
             </div>
-            <p className="text-sm text-brand-light/70 mt-2">
-              Secure identity verification powered by World ID + Chainlink
+            <p className="text-xs text-brand-light/70 mt-1">
+              Secure identity verification
             </p>
           </div>
 
-          {/* Content */}
-          <div className="px-6 py-6">
-            {/* Progress Steps */}
-            <div className="space-y-4 mb-6">
+          {/* Content - Scrollable */}
+          <div className="px-4 py-4 space-y-4">
+            {/* Progress Steps - Compact */}
+            <div className="space-y-2">
               {/* Step 1: World ID Verification */}
-              <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+              <div className={`flex items-start gap-2 p-2 rounded-lg transition-colors ${
                 getStepStatus(1) === 'current' ? 'bg-brand-primary/10 border border-brand-primary/30' :
                 getStepStatus(1) === 'completed' ? 'bg-green-500/10 border border-green-500/30' :
                 'bg-brand-dark/20'
               }`}>
-                <span className="text-lg mt-0.5">{getStepIcon(1)}</span>
-                <div className="flex-1">
-                  <h3 className="font-medium text-brand-light">World ID Verification</h3>
-                  <p className="text-sm text-brand-light/70">
-                    Prove you're a unique human with zero-knowledge proof
+                <span className="text-sm mt-0.5">{getStepIcon(1)}</span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-medium text-brand-light">World ID</h3>
+                  <p className="text-xs text-brand-light/70 leading-tight">
+                    Prove you're a unique human
                   </p>
                   {getStepStatus(1) === 'completed' && (
-                    <p className="text-xs text-green-400 mt-1">✓ Identity verified on-chain</p>
+                    <p className="text-xs text-green-400 mt-0.5">✓ Verified on-chain</p>
                   )}
                 </div>
               </div>
 
               {/* Step 2: Onfido Document Check */}
-              <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+              <div className={`flex items-start gap-2 p-2 rounded-lg transition-colors ${
                 getStepStatus(2) === 'current' ? 'bg-brand-primary/10 border border-brand-primary/30' :
                 getStepStatus(2) === 'completed' ? 'bg-green-500/10 border border-green-500/30' :
                 'bg-brand-dark/20'
               }`}>
-                <span className="text-lg mt-0.5">{getStepIcon(2)}</span>
-                <div className="flex-1">
-                  <h3 className="font-medium text-brand-light">Document Verification</h3>
-                  <p className="text-sm text-brand-light/70">
-                    Chainlink DON processes your ID with Onfido
+                <span className="text-sm mt-0.5">{getStepIcon(2)}</span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-medium text-brand-light">Document Check</h3>
+                  <p className="text-xs text-brand-light/70 leading-tight">
+                    ID verification with AI
                   </p>
                   {getStepStatus(2) === 'current' && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <div className="w-3 h-3 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
                       <span className="text-xs text-brand-primary">Processing...</span>
                     </div>
                   )}
                   {getStepStatus(2) === 'completed' && (
-                    <p className="text-xs text-green-400 mt-1">✓ Documents verified by consensus</p>
+                    <p className="text-xs text-green-400 mt-0.5">✓ Documents verified</p>
                   )}
                 </div>
               </div>
 
               {/* Step 3: OnchainID Creation */}
-              <div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+              <div className={`flex items-start gap-2 p-2 rounded-lg transition-colors ${
                 getStepStatus(3) === 'current' ? 'bg-brand-primary/10 border border-brand-primary/30' :
                 getStepStatus(3) === 'completed' ? 'bg-green-500/10 border border-green-500/30' :
                 'bg-brand-dark/20'
               }`}>
-                <span className="text-lg mt-0.5">{getStepIcon(3)}</span>
-                <div className="flex-1">
-                  <h3 className="font-medium text-brand-light">OnchainID Registration</h3>
-                  <p className="text-sm text-brand-light/70">
-                    Create your compliant identity for ERC-3643 tokens
+                <span className="text-sm mt-0.5">{getStepIcon(3)}</span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-medium text-brand-light">OnchainID</h3>
+                  <p className="text-xs text-brand-light/70 leading-tight">
+                    Create compliant identity
                   </p>
                   {getStepStatus(3) === 'completed' && (
-                    <p className="text-xs text-green-400 mt-1">✓ Ready to invest in tokenized assets</p>
+                    <p className="text-xs text-green-400 mt-0.5">✓ Ready to invest</p>
                   )}
                 </div>
               </div>
 
               {/* Step 4: Complete */}
               {kycStatus === KYCStatus.FULL_KYC && (
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
-                  <span className="text-lg mt-0.5">🎉</span>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-green-400">KYC Complete!</h3>
-                    <p className="text-sm text-brand-light/70">
-                      You can now invest in real estate tokens
+                <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/30">
+                  <span className="text-sm mt-0.5">🎉</span>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-green-400">KYC Complete!</h3>
+                    <p className="text-xs text-brand-light/70 leading-tight">
+                      You can now invest
                     </p>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Error State */}
-            {error && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+            {/* Error State - Compact */}
+            {(error || localError) && (
+              <div className="p-2 bg-red-500/10 border border-red-500/30 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <span className="text-red-400 mt-0.5">⚠️</span>
-                  <div>
-                    <h4 className="text-sm font-medium text-red-400">Verification Error</h4>
-                    <p className="text-xs text-red-300 mt-1">{error}</p>
+                  <span className="text-red-400 mt-0.5 text-sm">⚠️</span>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium text-red-400">Error</h4>
+                    <p className="text-xs text-red-300 mt-0.5 leading-tight">{localError || error}</p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Current Status */}
-            <div className="mb-6 p-3 bg-brand-dark/30 rounded-lg">
+            {/* Current Status - Compact */}
+            <div className="p-2 bg-brand-dark/30 rounded-lg">
               <div className="flex items-center gap-2">
                 {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-3 h-3 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
                 ) : (
-                  <div className={`w-3 h-3 rounded-full ${
+                  <div className={`w-2 h-2 rounded-full ${
                     kycStatus === KYCStatus.FULL_KYC ? 'bg-green-400' :
                     kycStatus === KYCStatus.REJECTED ? 'bg-red-400' :
                     kycStatus === KYCStatus.WORLD_ID_VERIFIED || kycStatus === KYCStatus.PENDING_OFFCHAIN ? 'bg-yellow-400' :
                     'bg-gray-400'
                   }`}></div>
                 )}
-                <span className="text-sm text-brand-light">{statusText}</span>
+                <span className="text-xs text-brand-light leading-tight">{statusText}</span>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-3">
+            {/* Action Buttons - Compact */}
+            <div className="space-y-2">
               {kycStatus === KYCStatus.NONE && (
                 <button
                   onClick={handleStartKYC}
                   disabled={isLoading}
-                  className="w-full px-4 py-3 bg-brand-primary hover:bg-brand-primary/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-3 py-2 bg-brand-primary hover:bg-brand-primary/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Starting Verification...
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Starting...
                     </>
                   ) : (
                     <>
-                      🆔 Start KYC with World ID
+                      🆔 Start KYC
                     </>
                   )}
                 </button>
@@ -344,7 +348,7 @@ export default function KYCModal({
               {kycStatus === KYCStatus.FULL_KYC && (
                 <button
                   onClick={onClose}
-                  className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-medium transition-colors"
+                  className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white text-sm font-medium transition-colors"
                 >
                   🎉 Continue to Marketplace
                 </button>
@@ -352,12 +356,12 @@ export default function KYCModal({
 
               {(kycStatus === KYCStatus.WORLD_ID_VERIFIED || kycStatus === KYCStatus.PENDING_OFFCHAIN) && (
                 <div className="text-center">
-                  <p className="text-sm text-brand-light/70">
-                    Verification in progress... This may take a few moments.
+                  <p className="text-xs text-brand-light/70 leading-tight">
+                    Verification in progress...
                   </p>
                   <button
                     onClick={onClose}
-                    className="mt-2 text-sm text-brand-primary hover:text-brand-primary/80 transition-colors"
+                    className="mt-1 text-xs text-brand-primary hover:text-brand-primary/80 transition-colors"
                   >
                     Continue browsing
                   </button>
@@ -368,26 +372,26 @@ export default function KYCModal({
                 <button
                   onClick={handleStartKYC}
                   disabled={isLoading}
-                  className="w-full px-4 py-3 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors"
+                  className="w-full px-3 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white text-sm font-medium transition-colors"
                 >
-                  {isLoading ? 'Retrying...' : 'Retry KYC Verification'}
+                  {isLoading ? 'Retrying...' : 'Retry KYC'}
                 </button>
               )}
             </div>
 
-            {/* Personal Information Form */}
+            {/* Personal Information Form - Compact */}
             {showPersonalInfoForm && (
-              <div className="mt-6 p-4 bg-brand-dark/30 rounded-lg">
-                <h3 className="text-lg font-medium text-brand-light mb-3">
+              <div className="p-3 bg-brand-dark/30 rounded-lg">
+                <h3 className="text-sm font-medium text-brand-light mb-2">
                   👤 Personal Information
                 </h3>
-                <p className="text-sm text-brand-light/70 mb-4">
-                  Please provide your personal details for identity verification.
+                <p className="text-xs text-brand-light/70 mb-3 leading-tight">
+                  Please provide your details for verification.
                 </p>
-                <form onSubmit={handlePersonalInfoSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handlePersonalInfoSubmit} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-sm font-medium text-brand-light mb-1">
+                      <label className="block text-xs font-medium text-brand-light mb-1">
                         First Name *
                       </label>
                       <input
@@ -395,12 +399,12 @@ export default function KYCModal({
                         required
                         value={personalInfo.firstName}
                         onChange={(e) => setPersonalInfo(prev => ({ ...prev, firstName: e.target.value }))}
-                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded px-2 py-1.5 text-sm text-brand-light focus:outline-none focus:ring-1 focus:ring-brand-primary"
                         placeholder="John"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-brand-light mb-1">
+                      <label className="block text-xs font-medium text-brand-light mb-1">
                         Last Name *
                       </label>
                       <input
@@ -408,14 +412,14 @@ export default function KYCModal({
                         required
                         value={personalInfo.lastName}
                         onChange={(e) => setPersonalInfo(prev => ({ ...prev, lastName: e.target.value }))}
-                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded px-2 py-1.5 text-sm text-brand-light focus:outline-none focus:ring-1 focus:ring-brand-primary"
                         placeholder="Doe"
                       />
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-brand-light mb-1">
+                    <label className="block text-xs font-medium text-brand-light mb-1">
                       Email Address *
                     </label>
                     <input
@@ -423,14 +427,14 @@ export default function KYCModal({
                       required
                       value={personalInfo.email}
                       onChange={(e) => setPersonalInfo(prev => ({ ...prev, email: e.target.value }))}
-                      className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded px-2 py-1.5 text-sm text-brand-light focus:outline-none focus:ring-1 focus:ring-brand-primary"
                       placeholder="john.doe@example.com"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-sm font-medium text-brand-light mb-1">
+                      <label className="block text-xs font-medium text-brand-light mb-1">
                         Date of Birth *
                       </label>
                       <input
@@ -438,20 +442,20 @@ export default function KYCModal({
                         required
                         value={personalInfo.dateOfBirth}
                         onChange={(e) => setPersonalInfo(prev => ({ ...prev, dateOfBirth: e.target.value }))}
-                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded px-2 py-1.5 text-sm text-brand-light focus:outline-none focus:ring-1 focus:ring-brand-primary"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-brand-light mb-1">
+                      <label className="block text-xs font-medium text-brand-light mb-1">
                         Country *
                       </label>
                       <select
                         required
                         value={personalInfo.country}
                         onChange={(e) => setPersonalInfo(prev => ({ ...prev, country: e.target.value }))}
-                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded px-2 py-1.5 text-sm text-brand-light focus:outline-none focus:ring-1 focus:ring-brand-primary"
                       >
-                        <option value="">Select country</option>
+                        <option value="">Select</option>
                         <option value="AR">Argentina</option>
                         <option value="BR">Brazil</option>
                         <option value="CL">Chile</option>
@@ -467,72 +471,45 @@ export default function KYCModal({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-brand-light mb-1">
-                      Address
+                    <label className="block text-xs font-medium text-brand-light mb-1">
+                      Address (Optional)
                     </label>
                     <input
                       type="text"
                       value={personalInfo.address}
                       onChange={(e) => setPersonalInfo(prev => ({ ...prev, address: e.target.value }))}
-                      className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded px-2 py-1.5 text-sm text-brand-light focus:outline-none focus:ring-1 focus:ring-brand-primary"
                       placeholder="123 Main Street"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-brand-light mb-1">
-                        City
-                      </label>
-                      <input
-                        type="text"
-                        value={personalInfo.city}
-                        onChange={(e) => setPersonalInfo(prev => ({ ...prev, city: e.target.value }))}
-                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                        placeholder="Buenos Aires"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-brand-light mb-1">
-                        Postal Code
-                      </label>
-                      <input
-                        type="text"
-                        value={personalInfo.postalCode}
-                        onChange={(e) => setPersonalInfo(prev => ({ ...prev, postalCode: e.target.value }))}
-                        className="w-full border border-brand-primary/30 bg-brand-dark/50 rounded-lg px-3 py-2 text-brand-light focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                        placeholder="1234"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 pt-4">
+                  <div className="flex gap-2 pt-2">
                     <button 
                       type="button"
                       onClick={() => setShowPersonalInfoForm(false)}
-                      className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+                      className="flex-1 bg-gray-600 text-white py-1.5 px-3 rounded text-sm hover:bg-gray-700 transition-colors"
                     >
                       Cancel
                     </button>
                     <button 
                       type="submit"
-                      className="flex-1 bg-brand-primary text-white py-2 px-4 rounded-lg hover:bg-brand-primary/80 transition-colors"
+                      className="flex-1 bg-brand-primary text-white py-1.5 px-3 rounded text-sm hover:bg-brand-primary/80 transition-colors"
                     >
-                      Continue to Document Upload
+                      Continue
                     </button>
                   </div>
                 </form>
               </div>
             )}
 
-            {/* Onfido Document Capture */}
+            {/* Onfido Document Capture - Compact */}
             {showOnfidoCapture && onfidoData && (
-              <div className="mt-6 p-4 bg-brand-dark/30 rounded-lg">
-                <h3 className="text-lg font-medium text-brand-light mb-3">
-                  📄 Upload Your Documents
+              <div className="p-3 bg-brand-dark/30 rounded-lg">
+                <h3 className="text-sm font-medium text-brand-light mb-2">
+                  📄 Upload Documents
                 </h3>
-                <p className="text-sm text-brand-light/70 mb-4">
-                  Please provide a clear photo of your government-issued ID and a selfie for verification.
+                <p className="text-xs text-brand-light/70 mb-3 leading-tight">
+                  Please provide a clear photo of your ID and a selfie.
                 </p>
                 <OnfidoCapture
                   token={onfidoData.sdkToken}
@@ -543,20 +520,20 @@ export default function KYCModal({
               </div>
             )}
 
-            {/* Info Footer */}
-            <div className="mt-6 pt-4 border-t border-brand-primary/20">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-brand-light/60">
+            {/* Info Footer - Compact */}
+            <div className="pt-3 border-t border-brand-primary/20">
+              <div className="space-y-1">
+                <div className="flex items-center gap-1 text-xs text-brand-light/60">
                   <span>🔒</span>
-                  <span>Your data is encrypted and processed securely</span>
+                  <span>Secure & encrypted</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-brand-light/60">
+                <div className="flex items-center gap-1 text-xs text-brand-light/60">
                   <span>⚡</span>
-                  <span>Powered by Chainlink decentralized oracle network</span>
+                  <span>Powered by Chainlink</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-brand-light/60">
+                <div className="flex items-center gap-1 text-xs text-brand-light/60">
                   <span>🌍</span>
-                  <span>World ID ensures one person = one verification</span>
+                  <span>World ID verified</span>
                 </div>
               </div>
             </div>

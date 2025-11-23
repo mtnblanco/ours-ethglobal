@@ -56,10 +56,15 @@ app.use('*', (req, res) => {
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Ours Backend Server running on port ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
 });
+
+// Increase server timeout to handle blockchain operations
+server.timeout = 60000; // 60 seconds
+server.keepAliveTimeout = 65000; // 65 seconds  
+server.headersTimeout = 66000; // 66 seconds
 
 export default app;

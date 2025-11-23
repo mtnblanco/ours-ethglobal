@@ -155,13 +155,30 @@ export function useKYC(): KYCHookReturn {
     try {
       console.log('🆔 Starting KYC process with World ID...');
 
-      // Verificar que World ID esté conectado y verificado
-      if (!worldID.isVerified) {
-        console.log('📲 World ID not verified, requesting verification...');
-        const verified = await worldID.verifyWorldID();
-        if (!verified) {
-          throw new Error('World ID verification failed');
-        }
+      // Si World ID ya está verificado, saltar verificación backend
+      if (worldID.isVerified) {
+        console.log('✅ World ID already verified, skipping backend verification...');
+        
+        // Update KYC data with WORLD_ID_VERIFIED status directly
+        const newKYCData: KYCData = {
+          status: KYCStatus.WORLD_ID_VERIFIED,
+          nullifierHash: worldID.user.nullifierHash || "demo_nullifier",
+          requestedAt: Date.now() / 1000,
+          approvedAt: 0,
+          kycDataHash: '',
+          onchainIDAddress: ''
+        };
+        
+        setKycData(newKYCData);
+        setIsLoading(false);
+        return true;
+      }
+
+      // Si no está verificado, verificar primero
+      console.log('📲 World ID not verified, requesting verification...');
+      const verified = await worldID.verifyWorldID();
+      if (!verified) {
+        throw new Error('World ID verification failed');
       }
 
       // Call the actual World ID verification endpoint

@@ -61,11 +61,17 @@ export class BlockchainService {
       // Parse the proof array (assuming it's a JSON string with 8 elements)
       let proofArray: bigint[];
       try {
-        const proofParsed = JSON.parse(data.proof);
-        proofArray = proofParsed.map((p: string) => BigInt(p));
-        
-        if (proofArray.length !== 8) {
-          throw new Error('Proof must contain exactly 8 elements');
+        // Check if we're using mock data
+        if (data.proof === 'mock_proof_for_demo') {
+          console.log('🎭 Using mock proof array for demo');
+          proofArray = Array(8).fill(BigInt(0));
+        } else {
+          const proofParsed = JSON.parse(data.proof);
+          proofArray = proofParsed.map((p: string) => BigInt(p));
+          
+          if (proofArray.length !== 8) {
+            throw new Error('Proof must contain exactly 8 elements');
+          }
         }
       } catch (parseError) {
         // For demo purposes, use mock proof if parsing fails
@@ -75,8 +81,37 @@ export class BlockchainService {
 
       // Convert other parameters
       const signal = BigInt(1); // Mock signal for demo
-      const root = BigInt(data.merkle_root || "0");
-      const nullifierHash = BigInt(data.nullifier_hash || Math.floor(Math.random() * 1000000));
+      
+      // Handle merkle_root - convert mock data to valid BigInt
+      let root: bigint;
+      if (data.merkle_root === 'mock_merkle_root' || !data.merkle_root) {
+        console.log('🎭 Using mock merkle root for demo');
+        root = BigInt(Math.floor(Math.random() * 1000000));
+      } else {
+        try {
+          root = BigInt(data.merkle_root);
+        } catch (error) {
+          console.warn('Invalid merkle_root format, using random value:', error);
+          root = BigInt(Math.floor(Math.random() * 1000000));
+        }
+      }
+      
+      // Handle nullifier_hash - convert mock data to valid BigInt
+      let nullifierHash: bigint;
+      if (data.nullifier_hash === 'mock_nullifier_hash' || 
+          data.nullifier_hash === 'demo_nullifier_hash' || 
+          !data.nullifier_hash) {
+        console.log('🎭 Using mock nullifier hash for demo');
+        nullifierHash = BigInt(Math.floor(Math.random() * 1000000));
+      } else {
+        try {
+          // Try to convert hex string to BigInt
+          nullifierHash = BigInt(data.nullifier_hash);
+        } catch (error) {
+          console.warn('Invalid nullifier_hash format, using random value:', error);
+          nullifierHash = BigInt(Math.floor(Math.random() * 1000000));
+        }
+      }
 
       // Estimate gas
       const gasEstimate = await contract.requestKYCWithWorldID.estimateGas(

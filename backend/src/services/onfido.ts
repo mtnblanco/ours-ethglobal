@@ -131,6 +131,24 @@ export class OnfidoService {
     try {
       console.log('👤 Creating Onfido applicant:', userData.email);
       
+      // Check if we're using a demo token
+      if (this.apiToken === 'test_demo_token_for_development') {
+        console.log('🎭 Using mock Onfido response (demo token detected)');
+        
+        // Return mock applicant data
+        const mockApplicant = {
+          id: `mock_applicant_${Date.now()}`,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          email: userData.email,
+          dob: userData.dob,
+          address: userData.address
+        };
+        
+        console.log('✅ Mock applicant created:', mockApplicant.id);
+        return mockApplicant;
+      }
+      
       const response = await this.apiClient.post('/applicants', {
         first_name: userData.firstName,
         last_name: userData.lastName,
@@ -153,6 +171,17 @@ export class OnfidoService {
       };
     } catch (error) {
       console.error('❌ Error creating Onfido applicant:', error);
+      
+      // Log the detailed error response from Onfido API
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as AxiosError;
+        console.error('❌ Onfido API Error Details:', {
+          status: axiosError.response?.status,
+          statusText: axiosError.response?.statusText,
+          data: axiosError.response?.data
+        });
+      }
+      
       throw new Error('Failed to create Onfido applicant');
     }
   }
@@ -163,6 +192,19 @@ export class OnfidoService {
   async generateSDKToken(applicantId: string, referrer?: string): Promise<OnfidoSDKToken> {
     try {
       console.log('🔑 Generating SDK token for applicant:', applicantId);
+      
+      // Check if we're using a demo token
+      if (this.apiToken === 'test_demo_token_for_development') {
+        console.log('🎭 Using mock SDK token (demo token detected)');
+        
+        const mockToken = {
+          token: `mock_sdk_token_${Date.now()}`,
+          applicantId
+        };
+        
+        console.log('✅ Mock SDK token generated');
+        return mockToken;
+      }
       
       const response = await this.apiClient.post('/sdk_tokens', {
         applicant_id: applicantId,
@@ -189,6 +231,75 @@ export class OnfidoService {
   async createCheck(applicantId: string, userAddress?: string): Promise<OnfidoCheck> {
     try {
       console.log('🔍 Creating verification check for applicant:', applicantId);
+      
+      // Check if we're using a demo token
+      if (this.apiToken === 'test_demo_token_for_development') {
+        console.log('🎭 Using mock check (demo token detected)');
+        
+        const mockCheck = {
+          id: `mock_check_${Date.now()}`,
+          status: 'complete' as const,
+          result: 'clear' as const,
+          applicantId,
+          reports: [
+            {
+              id: `mock_document_report_${Date.now()}`,
+              name: 'document',
+              status: 'complete',
+              result: 'clear'
+            },
+            {
+              id: `mock_face_report_${Date.now()}`,
+              name: 'facial_similarity',
+              status: 'complete',
+              result: 'clear'
+            }
+          ],
+          createdAt: new Date().toISOString(),
+          href: `https://api.onfido.com/v3/checks/mock_check_${Date.now()}`
+        };
+        
+        // Store user address mapping for later webhook processing
+        if (userAddress) {
+          this.userAddressMapping.set(mockCheck.id, userAddress);
+          console.log('📝 Stored user address mapping:', mockCheck.id, '->', userAddress);
+        }
+        
+        console.log('✅ Mock check created:', mockCheck.id);
+        
+        // Simulate immediate completion for demo
+        setTimeout(async () => {
+          console.log('🎭 Simulating mock webhook completion...');
+          if (this.blockchainService && userAddress) {
+            try {
+              // Check if user has completed World ID first
+              console.log('🔍 Checking if user completed World ID verification first...');
+              const kycStatus = await this.blockchainService.getKYCStatus(userAddress);
+              
+              if (kycStatus.status !== 'WORLD_ID_VERIFIED') {
+                console.warn('⚠️ User must complete World ID verification first. Current status:', kycStatus.status);
+                console.warn('❌ Cannot fulfill KYC without World ID verification (status must be WORLD_ID_VERIFIED)');
+                return;
+              }
+              
+              console.log('✅ User has completed World ID verification, proceeding with fulfillKYC...');
+              const kycDataHash = this.generateKYCDataHash(mockCheck);
+              const result = await this.blockchainService.fulfillKYC(userAddress, true, kycDataHash);
+              
+              if (result.success) {
+                console.log('🎉 Mock KYC fulfillment successful! Transaction hash:', result.transaction_hash);
+                this.userAddressMapping.delete(mockCheck.id);
+              } else {
+                console.error('❌ Mock fulfillKYC failed:', result.error);
+              }
+            } catch (error) {
+              console.error('❌ Error in mock fulfillKYC:', error);
+            }
+          }
+        }, 5000); // 5 second delay to simulate processing
+        
+        return mockCheck;
+      }
       
       const response = await this.apiClient.post('/checks', {
         applicant_id: applicantId,
@@ -336,6 +447,18 @@ export class OnfidoService {
 
       // Call fulfillKYC on the smart contract
       try {
+        // First, check if user has completed World ID verification
+        console.log('🔍 Checking if user completed World ID verification first...');
+        const kycStatus = await this.blockchainService.getKYCStatus(userAddress);
+        
+        if (kycStatus.status !== 'WORLD_ID_VERIFIED') {
+          console.warn('⚠️ User must complete World ID verification first. Current status:', kycStatus.status);
+          console.warn('❌ Cannot fulfill KYC without World ID verification (status must be WORLD_ID_VERIFIED)');
+          return;
+        }
+        
+        console.log('✅ User has completed World ID verification, proceeding with fulfillKYC...');
+        
         const approved = check.result === 'clear';
         const kycDataHash = this.generateKYCDataHash(check);
         
