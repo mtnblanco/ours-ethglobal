@@ -105,3 +105,4 @@ cre workflow simulate ./ours --target=staging-settings --trigger-index=0 --evm-t
 - **Permisos:** El workflow necesita permisos para llamar `fulfillKYC()` (esto se configura dando el rol al DON después del deploy)
 - **Evento:** Necesitas un evento real emitido antes de simular
 
+

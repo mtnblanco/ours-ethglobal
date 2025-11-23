@@ -58,3 +58,4 @@ echo ""
 echo "✅ Workflow ejecutado"
 echo "📝 Verifica en el explorer que se ejecutó fulfillKYC() en el contrato"
 
+

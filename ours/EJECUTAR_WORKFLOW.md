@@ -62,3 +62,4 @@ cd /Users/mtn/Desktop/ours-eth/ours
 Explorer: https://worldchain-sepolia.explorer.alchemy.com
 Contrato: `0xd5467031Ae1d256bB4c9DC879aB53fFa9B5ff5a5`
 
+

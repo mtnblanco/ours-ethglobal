@@ -92,3 +92,4 @@ Este comando:
 
 3. **Testing**: Para testing, puedes usar `mockOnfidoApproved: false` en el config para verificar el flujo de rechazo también.
 
+

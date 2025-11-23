@@ -2,166 +2,182 @@ import { cre, Runner, type Runtime } from "@chainlink/cre-sdk";
 import { keccak256, toUtf8Bytes } from "ethers";
 import contractAbiJson from "./abis/ChainlinkKYCIssuer.json";
 
-// Tipo para la configuración del workflow
+//
+// -------------------------
+// TYPES
+// -------------------------
 type Config = {
-  kycIssuerAddress: string;
-  // Mockeado: onfidoApiToken ya no se usa
-  applicantIdLookupUrl?: string; // Opcional, si quieres mockear también el backend
-  lookupApiToken?: string; // Opcional
-  mockOnfidoApproved?: boolean; // Flag para mockear aprobado/rechazado
+  kycIssuerAddress: string;          // Contrato en Worldchain
+  applicantIdLookupUrl?: string;     // Backend opcional
+  lookupApiToken?: string;           // Token para el backend
+  mockOnfidoApproved?: boolean;      // Mock para demo
 };
 
-// Tipo para el payload del evento KYCRequested
 interface KYCRequestedEvent {
   user: string;
   nullifierHash: string;
   timestamp: string;
 }
 
-// Tipo para la respuesta del backend (applicant ID)
 interface ApplicantIdResponse {
   applicantId: string;
 }
 
-// Tipo para la respuesta de Onfido Check
 interface OnfidoCheckResponse {
   id: string;
   status: string;
-  result: string; // "clear" o "consider"
+  result: string; // clear o consider
   [key: string]: unknown;
 }
 
-// Handler principal del workflow
-const onKYCRequested = async (runtime: Runtime<Config>, event: KYCRequestedEvent) => {
-  const { user, nullifierHash, timestamp } = event;
+//
+// -------------------------
+// HELPERS
+// -------------------------
+async function fetchApplicantId(
+  runtime: Runtime<Config>,
+  user: string
+): Promise<string> {
   const config = runtime.getConfig();
-  
-  runtime.log(`Processing KYC request for user: ${user}, nullifierHash: ${nullifierHash}`);
-  
-  // Paso 1: Obtener applicant ID (mockeado o desde backend)
-  let applicantId: string;
-  
-  if (config.applicantIdLookupUrl && config.lookupApiToken) {
-    // Opción real: obtener desde backend
-    runtime.log(`Fetching applicant ID from backend...`);
-    const applicantIdUrl = `${config.applicantIdLookupUrl}/${user}`;
-    
-    const httpClient = new cre.capabilities.HTTPClient();
-    const applicantIdRequest = {
-      url: applicantIdUrl,
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${config.lookupApiToken}`,
-        "Content-Type": "application/json"
-      }
-    };
-    
-    const applicantIdResponse = httpClient.sendRequest(runtime, applicantIdRequest);
-    const applicantIdResult = await applicantIdResponse.result();
-    
-    if (applicantIdResult.statusCode !== 200) {
-      throw new Error(`Failed to fetch applicant ID: ${applicantIdResult.statusCode}`);
-    }
-    
-    const applicantData: ApplicantIdResponse = JSON.parse(applicantIdResult.body);
-    applicantId = applicantData.applicantId;
-    
-    if (!applicantId) {
-      throw new Error(`No applicant ID found for user: ${user}`);
-    }
-    
-    runtime.log(`Found applicant ID: ${applicantId}`);
-  } else {
-    // Mock: generar un applicant ID ficticio
-    applicantId = `mock-applicant-${user.slice(0, 10)}-${Date.now()}`;
-    runtime.log(`Using mock applicant ID: ${applicantId}`);
+
+  // Sin backend → mock
+  if (!config.applicantIdLookupUrl || !config.lookupApiToken) {
+    const mockId = `mock-${user.slice(0, 8)}-${Date.now()}`;
+    runtime.log(`[MOCK] Applicant ID generado: ${mockId}`);
+    return mockId;
   }
-  
-  // Paso 2: Mockear respuesta de Onfido Check
-  runtime.log(`[MOCK] Checking Onfido status for applicant: ${applicantId}`);
-  
-  // Determinar si está aprobado (por defecto aprobado, o usar flag de config)
-  const approved = config.mockOnfidoApproved !== undefined 
-    ? config.mockOnfidoApproved 
-    : true; // Por defecto aprobado para la demo
-  
-  // Crear respuesta mock realista de Onfido
-  const onfidoCheck: OnfidoCheckResponse = {
+
+  runtime.log(`Buscando applicantId en backend para usuario: ${user}`);
+
+  const http = new cre.capabilities.HTTPClient();
+  const request = {
+    url: `${config.applicantIdLookupUrl}/${user}`,
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${config.lookupApiToken}`,
+      "Content-Type": "application/json",
+    },
+  };
+
+  const response = await http.sendRequest(runtime, request).result();
+
+  if (response.statusCode !== 200) {
+    throw new Error(
+      `Backend devolvió ${response.statusCode}: ${response.body}`
+    );
+  }
+
+  const parsed: ApplicantIdResponse = JSON.parse(response.body);
+  if (!parsed.applicantId) {
+    throw new Error(`El backend no devolvió applicantId para ${user}`);
+  }
+
+  runtime.log(`Applicant ID encontrado: ${parsed.applicantId}`);
+  return parsed.applicantId;
+}
+
+function mockOnfidoCheck(
+  runtime: Runtime<Config>,
+  applicantId: string
+): OnfidoCheckResponse {
+  const config = runtime.getConfig();
+
+  const approved =
+    config.mockOnfidoApproved !== undefined
+      ? config.mockOnfidoApproved
+      : true;
+
+  runtime.log(
+    `[MOCK] Onfido result: ${approved ? "APPROVED" : "REJECTED"}`
+  );
+
+  return {
     id: applicantId,
     status: "complete",
-    result: approved ? "clear" : "consider",
     type: "express",
+    result: approved ? "clear" : "consider",
     created_at: new Date().toISOString(),
-    result_url: `https://dashboard.onfido.com/checks/${applicantId}`,
-    href: `/v3/checks/${applicantId}`,
-    download_uri: `/v3/checks/${applicantId}/download`,
-    form_uri: null,
-    redirect_uri: null,
-    results_uri: null,
-    report_ids: approved ? ["report-1", "report-2"] : [],
     document_ids: ["doc-1"],
-    privacy_notices_read_consent_given: true
+    report_ids: approved ? ["report-1"] : [],
   };
-  
-  runtime.log(`[MOCK] Onfido check result: ${onfidoCheck.result} (${approved ? "APPROVED" : "REJECTED"})`);
-  
-  // Paso 3: Calcular hash del resultado (Keccak256)
-  const checkDataString = JSON.stringify(onfidoCheck);
-  const hash = keccak256(toUtf8Bytes(checkDataString));
-  
-  runtime.log(`Calculated hash: ${hash}`);
-  
-  // Paso 4: Ya tenemos approved desde la configuración (mocked)
-  runtime.log(`KYC approved: ${approved}`);
-  
-  // Paso 5: Llamar fulfillKYC() en el contrato
-  runtime.log(`Calling fulfillKYC on contract: ${config.kycIssuerAddress}`);
-  
-  // Usar el ABI importado directamente
+}
+
+function hashCheckResult(check: OnfidoCheckResponse): string {
+  const json = JSON.stringify(check);
+  return keccak256(toUtf8Bytes(json));
+}
+
+//
+// -------------------------
+// MAIN HANDLER
+// -------------------------
+const onKYCRequested = async (
+  runtime: Runtime<Config>,
+  event: KYCRequestedEvent
+) => {
+  const { user, nullifierHash } = event;
+
+  runtime.log(`\n--- Nueva solicitud KYC para ${user} ---`);
+  runtime.log(`NullifierHash: ${nullifierHash}`);
+
+  // 1. Obtener Applicant ID (real o mock)
+  const applicantId = await fetchApplicantId(runtime, user);
+
+  // 2. Mock del resultado Onfido
+  const check = mockOnfidoCheck(runtime, applicantId);
+
+  // Determinación de aprovado/rechazado
+  const approved = check.result === "clear";
+
+  runtime.log(`Aprobado: ${approved}`);
+
+  // 3. Hashear resultado
+  const hash = hashCheckResult(check);
+  runtime.log(`Hash del KYC: ${hash}`);
+
+  // 4. Enviar fulfillKYC() a tu contrato
+  const config = runtime.getConfig();
   const contractAbi = contractAbiJson.abi;
-  
-  // Llamar la función fulfillKYC usando EVMClient
-  // Worldchain Sepolia chain selector: 5299555114858065850
-  const evmClient = new cre.capabilities.EVMClient(5299555114858065850n);
-  
-  const callContractRequest = {
-    to: config.kycIssuerAddress,
-    abi: contractAbi,
-    function: "fulfillKYC",
-    args: [user, approved, hash]
-  };
-  
-  const txResponse = evmClient.callContract(runtime, callContractRequest);
-  const txResult = await txResponse.result();
-  
-  runtime.log(`Transaction sent: ${txResult.transactionHash}`);
-  runtime.log(`KYC fulfillment completed for user: ${user}`);
-  
+
+  const worldchainSelector = 5299555114858065850n;
+
+  const evm = new cre.capabilities.EVMClient(worldchainSelector);
+
+  const tx = await evm
+    .callContract(runtime, {
+      to: config.kycIssuerAddress,
+      abi: contractAbi,
+      function: "fulfillKYC",
+      args: [user, approved, hash],
+    })
+    .result();
+
+  runtime.log(`Tx enviada → ${tx.transactionHash}`);
+  runtime.log(`KYC completado para ${user}`);
+
   return {
     user,
     approved,
     hash,
-    transactionHash: txResult.transactionHash
+    tx: tx.transactionHash,
   };
 };
 
-// Inicializar el workflow
+//
+// -------------------------
+// TRIGGER + RUNNER
+// -------------------------
 const initWorkflow = async (config: Config) => {
-  // Crear el trigger para el evento EVM KYCRequested
-  // Worldchain Sepolia chain selector: 5299555114858065850
-  const evmClient = new cre.capabilities.EVMClient(5299555114858065850n);
-  
-  // Usar el ABI importado directamente
+  const worldchainSelector = 5299555114858065850n;
+  const evm = new cre.capabilities.EVMClient(worldchainSelector);
   const contractAbi = contractAbiJson.abi;
-  
-  // Crear el trigger para escuchar el evento KYCRequested
+
   return [
     cre.handler(
-      evmClient.logTrigger({
+      evm.logTrigger({
         contractAddress: config.kycIssuerAddress,
         abi: contractAbi,
         eventName: "KYCRequested",
-        // El SDK mapea automáticamente los parámetros del evento (user, nullifierHash, timestamp)
       }),
       onKYCRequested
     ),
