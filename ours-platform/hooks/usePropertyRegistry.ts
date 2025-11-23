@@ -46,14 +46,55 @@ export function usePropertiesWithSales(propertyAddresses: Address[] | undefined)
 
   // Transform the data into a more usable format
   const properties: PropertyWithSale[] | undefined = data?.map((result, index) => {
+    console.log(`\n=== Processing result ${index} ===`);
+    console.log('Result status:', result.status);
+    console.log('Result error:', result.error);
+
     if (result.status === 'success' && result.result) {
-      const [property, sale, saleIsActive] = result.result as [Property, Sale, boolean];
+      // Handle both array and object formats from Wagmi/Viem
+      const resultData = result.result as any;
+
+      console.log('usePropertiesWithSales - Raw result data type:', typeof resultData);
+      console.log('usePropertiesWithSales - Is array?', Array.isArray(resultData));
+      console.log('usePropertiesWithSales - Constructor:', resultData?.constructor?.name);
+      console.log('usePropertiesWithSales - Keys:', resultData ? Object.keys(resultData) : 'no keys');
+      console.log('usePropertiesWithSales - Full result:', JSON.stringify(resultData, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+      , 2));
+
+      // Check if it's an array (tuple) or object format
+      let property: Property;
+      let sale: Sale;
+      let saleIsActive: boolean;
+
+      if (Array.isArray(resultData)) {
+        // Tuple format: [property, sale, saleIsActive]
+        console.log('usePropertiesWithSales - Processing as array, length:', resultData.length);
+        [property, sale, saleIsActive] = resultData as [Property, Sale, boolean];
+      } else {
+        // Object format: {property, sale, saleIsActive} or {0, 1, 2}
+        console.log('usePropertiesWithSales - Processing as object');
+        console.log('usePropertiesWithSales - resultData.property type:', typeof resultData.property);
+        console.log('usePropertiesWithSales - resultData[0] type:', typeof resultData[0]);
+        property = resultData.property || resultData[0];
+        sale = resultData.sale || resultData[1];
+        saleIsActive = resultData.saleIsActive ?? resultData[2];
+      }
+
+      console.log('usePropertiesWithSales - Extracted property type:', typeof property);
+      console.log('usePropertiesWithSales - Extracted property:', property);
+      console.log('usePropertiesWithSales - Extracted sale type:', typeof sale);
+      console.log('usePropertiesWithSales - Extracted sale:', sale);
+      console.log('usePropertiesWithSales - saleIsActive:', saleIsActive);
+
       return {
         property,
         sale,
         saleIsActive,
       };
     }
+
+    console.log('Result was not successful or had no result');
     return null;
   }).filter((p): p is PropertyWithSale => p !== null);
 
@@ -79,7 +120,23 @@ export function usePropertyWithSale(tokenAddress: Address | undefined) {
   let propertyWithSale: PropertyWithSale | undefined;
 
   if (data) {
-    const [property, sale, saleIsActive] = data as [Property, Sale, boolean];
+    // Handle both array and object formats from Wagmi/Viem
+    const resultData = data as any;
+
+    let property: Property;
+    let sale: Sale;
+    let saleIsActive: boolean;
+
+    if (Array.isArray(resultData)) {
+      // Tuple format: [property, sale, saleIsActive]
+      [property, sale, saleIsActive] = resultData as [Property, Sale, boolean];
+    } else {
+      // Object format: {property, sale, saleIsActive} or {0, 1, 2}
+      property = resultData.property || resultData[0];
+      sale = resultData.sale || resultData[1];
+      saleIsActive = resultData.saleIsActive ?? resultData[2];
+    }
+
     propertyWithSale = {
       property,
       sale,
@@ -115,16 +172,18 @@ export function useConstructionProgress(tokenAddress: Address | undefined) {
 
 /**
  * Hook to get investment projection
+ * Note: This hook requires pricePerToken from the sale to calculate projection
  */
 export function useInvestmentProjection(
   tokenAddress: Address | undefined,
-  tokenAmount: bigint | undefined
+  tokenAmount: bigint | undefined,
+  pricePerToken: bigint | undefined
 ) {
   const { data, isLoading, error } = useReadContract({
-    address: CONTRACT_ADDRESSES.SALE_MANAGER as Address,
-    abi: SALE_MANAGER_ABI,
+    address: CONTRACT_ADDRESSES.PROPERTY_REGISTRY as Address,
+    abi: PROPERTY_REGISTRY_ABI,
     functionName: 'getInvestmentProjection',
-    args: tokenAddress && tokenAmount ? [tokenAddress, tokenAmount] : undefined,
+    args: tokenAddress && tokenAmount && pricePerToken ? [tokenAddress, tokenAmount, pricePerToken] : undefined,
   });
 
   let projection: {
@@ -135,13 +194,25 @@ export function useInvestmentProjection(
   } | undefined;
 
   if (data) {
-    const [investmentCost, ownershipPercentageBps, estimatedReturn, estimatedROIBps] = data as [bigint, bigint, bigint, bigint];
-    projection = {
-      investmentCost,
-      ownershipPercentageBps,
-      estimatedReturn,
-      estimatedROIBps,
-    };
+    // Handle both array and object formats from Wagmi/Viem
+    const resultData = data as any;
+
+    if (Array.isArray(resultData)) {
+      const [investmentCost, ownershipPercentageBps, estimatedReturn, estimatedROIBps] = resultData;
+      projection = {
+        investmentCost,
+        ownershipPercentageBps,
+        estimatedReturn,
+        estimatedROIBps,
+      };
+    } else {
+      projection = {
+        investmentCost: resultData.investmentCost || resultData[0],
+        ownershipPercentageBps: resultData.ownershipPercentageBps || resultData[1],
+        estimatedReturn: resultData.estimatedReturn || resultData[2],
+        estimatedROIBps: resultData.estimatedROIBps || resultData[3],
+      };
+    }
   }
 
   return {

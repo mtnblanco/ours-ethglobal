@@ -8,9 +8,171 @@ import LoadingState from './LoadingState';
 import ErrorState from './ErrorState';
 import { PropertyWithSale } from '@/lib/contracts';
 
+// Helper function to safely check if value exists
+function hasValue(obj: any, key: string | number): boolean {
+  try {
+    // First check if obj is a valid object type
+    if (obj === null || obj === undefined) return false;
+
+    // Check if it's a function or non-object type
+    const objType = typeof obj;
+    if (objType === 'function' || objType === 'string' || objType === 'number' || objType === 'boolean') {
+      return false;
+    }
+
+    // Now it's safe to check for the key
+    return obj[key] !== undefined;
+  } catch {
+    return false;
+  }
+}
+
+// Helper function to normalize property data from tuple or object format
+function normalizePropertyData(data: any) {
+  // Safety check - reject functions and invalid types
+  if (!data || typeof data === 'function' || typeof data === 'string') {
+    console.error('Invalid property data (function or string):', data);
+    return null;
+  }
+
+  if (typeof data !== 'object') {
+    console.error('Invalid property data type:', typeof data, data);
+    return null;
+  }
+
+  console.log('normalizePropertyData - input type:', typeof data);
+  console.log('normalizePropertyData - is array?', Array.isArray(data));
+  console.log('normalizePropertyData - keys:', Object.keys(data));
+  console.log('normalizePropertyData - full data:', data);
+
+  // If it's an array (tuple format), convert to object
+  if (Array.isArray(data)) {
+    console.log('normalizePropertyData - processing as array, length:', data.length);
+    return {
+      token: data[0],
+      issuer: data[1],
+      name: data[2],
+      location: data[3],
+      totalArea: data[4],
+      units: data[5],
+      constructionStart: data[6],
+      estimatedCompletion: data[7],
+      actualCompletion: data[8],
+      status: data[9],
+      ipfsHash: data[10],
+      cadastralNumber: data[11],
+      legalOwner: data[12],
+      registeredAt: data[13],
+      isActive: data[14],
+      totalTokenSupply: data[15],
+      totalInvestmentTarget: data[16],
+      estimatedSalePrice: data[17],
+    };
+  }
+
+  // Check if it's already a named object with at least the 'name' property
+  if (hasValue(data, 'name') && hasValue(data, 'location')) {
+    console.log('normalizePropertyData - already has name and location properties');
+    return data;
+  }
+
+  // If it's a numeric-indexed object {0, 1, 2...}, convert to named object
+  if (hasValue(data, 0)) {
+    console.log('normalizePropertyData - processing as numeric-indexed object');
+    return {
+      token: data[0],
+      issuer: data[1],
+      name: data[2],
+      location: data[3],
+      totalArea: data[4],
+      units: data[5],
+      constructionStart: data[6],
+      estimatedCompletion: data[7],
+      actualCompletion: data[8],
+      status: data[9],
+      ipfsHash: data[10],
+      cadastralNumber: data[11],
+      legalOwner: data[12],
+      registeredAt: data[13],
+      isActive: data[14],
+      totalTokenSupply: data[15],
+      totalInvestmentTarget: data[16],
+      estimatedSalePrice: data[17],
+    };
+  }
+
+  console.error('Unable to normalize property data - no matching format:', data);
+  return null;
+}
+
+// Helper function to normalize sale data from tuple or object format
+function normalizeSaleData(data: any) {
+  // Safety check - reject functions and invalid types
+  if (!data || typeof data === 'function' || typeof data === 'string') {
+    console.error('Invalid sale data (function or string):', data);
+    return null;
+  }
+
+  if (typeof data !== 'object') {
+    console.error('Invalid sale data type:', typeof data, data);
+    return null;
+  }
+
+  console.log('normalizeSaleData - input type:', typeof data);
+  console.log('normalizeSaleData - is array?', Array.isArray(data));
+  console.log('normalizeSaleData - keys:', Object.keys(data));
+  console.log('normalizeSaleData - full data:', data);
+
+  // If it's an array (tuple format), convert to object
+  if (Array.isArray(data)) {
+    console.log('normalizeSaleData - processing as array, length:', data.length);
+    return {
+      token: data[0],
+      issuer: data[1],
+      pricePerToken: data[2],
+      isActive: data[3],
+      totalRaised: data[4],
+      withdrawableBalance: data[5],
+    };
+  }
+
+  // Check if it's already a named object
+  if (hasValue(data, 'pricePerToken')) {
+    console.log('normalizeSaleData - already has pricePerToken property');
+    return data;
+  }
+
+  // If it's a numeric-indexed object {0, 1, 2...}, convert to named object
+  if (hasValue(data, 0)) {
+    console.log('normalizeSaleData - processing as numeric-indexed object');
+    return {
+      token: data[0],
+      issuer: data[1],
+      pricePerToken: data[2],
+      isActive: data[3],
+      totalRaised: data[4],
+      withdrawableBalance: data[5],
+    };
+  }
+
+  console.error('Unable to normalize sale data - no matching format:', data);
+  return null;
+}
+
 // Helper function to transform blockchain data to component format
 function transformPropertyData(propertyWithSale: PropertyWithSale, index: number) {
-  const { property, sale, saleIsActive } = propertyWithSale;
+  const { property: rawProperty, sale: rawSale, saleIsActive } = propertyWithSale;
+
+  // Debug logging
+  console.log('Raw property data:', rawProperty);
+  console.log('Raw sale data:', rawSale);
+
+  // Normalize the property and sale data
+  const property = normalizePropertyData(rawProperty);
+  const sale = normalizeSaleData(rawSale);
+
+  console.log('Normalized property:', property);
+  console.log('Normalized sale:', sale);
 
   // Calculate funded percentage
   const totalInvestmentTarget = Number(property.totalInvestmentTarget);
@@ -303,8 +465,16 @@ export default function MarketplaceList({ searchQuery = '', category = 'All', fi
     // Fetch all property addresses from blockchain
     const { propertyAddresses, isLoading: isLoadingAddresses, error: errorAddresses } = useAllProperties();
 
+    console.log('MarketplaceList - propertyAddresses:', propertyAddresses);
+    console.log('MarketplaceList - isLoadingAddresses:', isLoadingAddresses);
+    console.log('MarketplaceList - errorAddresses:', errorAddresses);
+
     // Fetch detailed property and sale information
     const { properties: blockchainProperties, isLoading: isLoadingProperties, error: errorProperties, refetch } = usePropertiesWithSales(propertyAddresses);
+
+    console.log('MarketplaceList - blockchainProperties:', blockchainProperties);
+    console.log('MarketplaceList - isLoadingProperties:', isLoadingProperties);
+    console.log('MarketplaceList - errorProperties:', errorProperties);
 
     // Show loading state
     if (isLoadingAddresses || isLoadingProperties) {
@@ -316,8 +486,21 @@ export default function MarketplaceList({ searchQuery = '', category = 'All', fi
         return <ErrorState error={errorAddresses || errorProperties} onRetry={refetch} />;
     }
 
+    // If no properties from blockchain, use mock data
+    if (!blockchainProperties || blockchainProperties.length === 0) {
+        console.warn('No properties from blockchain, using mock data');
+    }
+
     // Transform blockchain data to component format
-    const transformedProperties = blockchainProperties?.map((prop, index) => transformPropertyData(prop, index)) || [];
+    const transformedProperties = blockchainProperties?.map((prop, index) => {
+        try {
+            return transformPropertyData(prop, index);
+        } catch (error) {
+            console.error('Error transforming property data:', error);
+            console.error('Property data that caused error:', prop);
+            return null;
+        }
+    }).filter(p => p !== null) || [];
 
     // Filtrar propiedades basado en búsqueda, categoría y filtros
     const properties = transformedProperties.filter(property => {
