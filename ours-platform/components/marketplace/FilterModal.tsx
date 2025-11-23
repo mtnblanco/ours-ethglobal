@@ -81,7 +81,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
                       placeholder="0"
                       value={filters.minPrice || ''}
                       onChange={(e) => setFilters({ ...filters, minPrice: e.target.value ? Number(e.target.value) : undefined })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
+                      className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
                     />
                   </div>
                   <div>
@@ -91,7 +91,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
                       placeholder="200"
                       value={filters.maxPrice || ''}
                       onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value ? Number(e.target.value) : undefined })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
+                      className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
                     />
                   </div>
                 </div>
@@ -108,7 +108,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
                       placeholder="0"
                       value={filters.minAPY || ''}
                       onChange={(e) => setFilters({ ...filters, minAPY: e.target.value ? Number(e.target.value) : undefined })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
+                      className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
                     />
                   </div>
                   <div>
@@ -118,7 +118,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
                       placeholder="20"
                       value={filters.maxAPY || ''}
                       onChange={(e) => setFilters({ ...filters, maxAPY: e.target.value ? Number(e.target.value) : undefined })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
+                      className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
                     />
                   </div>
                 </div>
@@ -135,7 +135,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
                       placeholder="0"
                       value={filters.minFunded || ''}
                       onChange={(e) => setFilters({ ...filters, minFunded: e.target.value ? Number(e.target.value) : undefined })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
+                      className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
                     />
                   </div>
                   <div>
@@ -145,7 +145,7 @@ export default function FilterModal({ isOpen, onClose, onApplyFilters, currentFi
                       placeholder="100"
                       value={filters.maxFunded || ''}
                       onChange={(e) => setFilters({ ...filters, maxFunded: e.target.value ? Number(e.target.value) : undefined })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
+                      className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:border-[#2A2F5B]"
                     />
                   </div>
                 </div>

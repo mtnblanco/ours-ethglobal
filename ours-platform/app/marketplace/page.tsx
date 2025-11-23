@@ -6,6 +6,7 @@ import MarketplaceHero from '@/components/marketplace/MarketplaceHero';
 import MarketplaceList from '@/components/marketplace/MarketplaceList';
 import Footer from '@/components/Footer';
 import FilterModal, { FilterValues } from '@/components/marketplace/FilterModal';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,26 +31,28 @@ export default function MarketplacePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFFBF5]">
-      <Navbar />
-      <MarketplaceHero
-        onSearchChange={handleSearchChange}
-        onCategoryChange={handleCategoryChange}
-        onFilterClick={handleFilterClick}
-      />
-      <MarketplaceList
-        searchQuery={searchQuery}
-        category={category}
-        filters={filters}
-      />
-      <Footer />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-[#FFFBF5] overflow-x-hidden">
+        <Navbar />
+        <MarketplaceHero
+          onSearchChange={handleSearchChange}
+          onCategoryChange={handleCategoryChange}
+          onFilterClick={handleFilterClick}
+        />
+        <MarketplaceList
+          searchQuery={searchQuery}
+          category={category}
+          filters={filters}
+        />
+        <Footer />
 
-      <FilterModal
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleApplyFilters}
-        currentFilters={filters}
-      />
-    </div>
+        <FilterModal
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleApplyFilters}
+          currentFilters={filters}
+        />
+      </div>
+    </ProtectedRoute>
   );
 }

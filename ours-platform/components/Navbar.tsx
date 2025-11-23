@@ -3,6 +3,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { LogOut, User } from 'lucide-react';
 
 const Logo = ({ dark = false }: { dark?: boolean }) => (
   <div className="flex items-center gap-1">
@@ -18,6 +20,12 @@ const Logo = ({ dark = false }: { dark?: boolean }) => (
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    setMobileMenuOpen(false);
+  };
 
   return (
     <nav className="fixed top-0 w-full z-[150] bg-[#FDFBF7]/95 backdrop-blur-md py-4 md:py-6 border-b border-[#1E2046]/5">
@@ -50,6 +58,30 @@ export default function Navbar() {
             Standards
             <span className="absolute bottom-[-4px] left-0 w-0 h-0.5 bg-[#B0C9FF] group-hover:w-full transition-all duration-300"></span>
           </a>
+
+          {/* Auth Section - Desktop */}
+          {isAuthenticated ? (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-[#1E2046]/70">
+                <User className="w-4 h-4" />
+                <span className="text-sm">{user?.fullName || user?.worldId?.slice(0, 10) + '...'}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-[#2D2E63] text-[#B0CBFF] rounded-lg font-semibold hover:bg-[#1E2046] transition-all duration-300"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="px-6 py-2 bg-[#2D2E63] text-[#B0CBFF] rounded-lg font-semibold hover:bg-[#1E2046] transition-all duration-300 whitespace-nowrap"
+            >
+              Login
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Button - visible en mobile y tablet */}
@@ -104,6 +136,33 @@ export default function Navbar() {
             >
               Standards
             </a>
+
+            {/* Auth Section - Mobile */}
+            <div className="border-t border-[#1E2046]/10 pt-4 mt-2">
+              {isAuthenticated ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-[#1E2046]/70 py-2">
+                    <User className="w-4 h-4" />
+                    <span className="text-sm font-semibold">{user?.fullName || user?.worldId?.slice(0, 15) + '...'}</span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#2D2E63] text-[#B0CBFF] rounded-lg font-semibold hover:bg-[#1E2046] transition-all duration-300"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-center px-6 py-2 bg-[#2D2E63] text-[#B0CBFF] rounded-lg font-semibold hover:bg-[#1E2046] transition-all duration-300"
+                >
+                  Login
+                </Link>
+              )}
+            </div>
           </div>
         </motion.div>
       )}

@@ -2,11 +2,22 @@
 
 import { motion } from 'framer-motion';
 import { MapPin } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 // --- 1. Componente: La Tarjeta de Propiedad (El diseño interno) ---
-const PropertyCard = ({ data }) => {
+const PropertyCard = ({ data }: { data: any }) => {
+    const router = useRouter();
+
+    const handleClick = () => {
+        router.push(`/marketplace/${data.id}`);
+    };
+
     return (
-        <div className="relative bg-white border-2 border-black rounded-[30px] p-5 w-[65vw] overflow-hidden z-10 flex flex-col justify-between" style={{ minHeight: '420px' }}>
+        <div
+            onClick={handleClick}
+            className="relative bg-white border-2 border-black rounded-[30px] p-5 w-full max-w-[600px] overflow-hidden z-10 flex flex-col justify-between cursor-pointer hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
+            style={{ minHeight: '420px' }}
+        >
             {/* Header: Tag & Image */}
             <div className="space-y-3 mb-4">
                 <div className="relative h-40 w-full rounded-2xl overflow-hidden border border-black/10">
@@ -25,7 +36,7 @@ const PropertyCard = ({ data }) => {
                 {/* Título y Ubicación */}
                 <div>
                     <h3 className="text-2xl font-normal leading-tight text-black mb-1 font-sans tracking-tight">
-                        {data.title.split(" ").map((word, i) => (
+                        {data.title.split(" ").map((word: string, i: number) => (
                             <span key={i} className="block">{word}</span>
                         ))}
                     </h3>
@@ -70,16 +81,16 @@ const PropertyCard = ({ data }) => {
 };
 
 // --- 2. Wrapper para Items Impares (Fondo Azul Claro / Izquierda) ---
-const OddItem = ({ data }) => {
+const OddItem = ({ data }: { data: any }) => {
     return (
         <motion.div
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, margin: "-100px" }}
-            className="relative w-full flex justify-start"
+            className="relative w-full justify-end flex overflow-hidden"
         >
             <img style={{ transform: 'scaleY(1.6) scaleX(1.5)' }} src="/recurso2.svg" className="absolute top-0 left-0 w-full h-full -z-0 pointer-events-none" />
-            <div className="ml-[10%] py-8">
+            <div className="ml-[5%] md:ml-[10%] py-8 w-full flex justify-start">
                 <PropertyCard data={data} />
             </div>
         </motion.div>
@@ -87,17 +98,17 @@ const OddItem = ({ data }) => {
 };
 
 // --- 3. Wrapper para Items Pares (Fondo Azul Oscuro / Derecha) ---
-const EvenItem = ({ data }) => {
+const EvenItem = ({ data }: { data: any }) => {
     return (
         <motion.div
             initial={{ opacity: 0, x: 50 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, margin: "-100px" }}
-            className="relative w-full flex justify-end"
+            className="relative w-full flex justify-start overflow-hidden"
         >
             <img style={{ transform: 'scaleY(1.6) scaleX(1.5)' }}
                 src="/recurso1.svg" className="absolute top-0 right-0 w-full h-full -z-0 pointer-events-none" />
-            <div className="mr-[10%] py-8">
+            <div className="mr-[5%] md:mr-[10%] py-8 w-full flex justify-end">
                 <PropertyCard data={data} />
             </div>
         </motion.div>
@@ -269,8 +280,8 @@ export default function MarketplaceList({ searchQuery = '', category = 'All', fi
     });
 
     return (
-        <section className="bg-[#FFFBF5] py-12">
-            <div className="w-full">
+        <section className="bg-[#FFFBF5] py-12 overflow-x-hidden">
+            <div className="w-full max-w-full overflow-x-hidden">
 
                 {properties.length > 0 ? (
                     <div className="flex flex-col gap-[10px]">
