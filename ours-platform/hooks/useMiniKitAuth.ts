@@ -34,8 +34,8 @@ export function useMiniKitAuth() {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // Generate a nonce for authentication
-      const nonce = Math.floor(Math.random() * 1000000).toString();
+      // Generate a nonce for authentication (must be at least 8 characters)
+      const nonce = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const requestId = `auth-${Date.now()}`;
 
       console.log('Authenticating with MiniKit...');
