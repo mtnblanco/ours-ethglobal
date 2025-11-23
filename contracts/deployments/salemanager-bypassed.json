@@ -1,0 +1,13 @@
+{
+  "SaleManager": "0xF7AdA21247C75778E661059586b5527E0aA3b25f",
+  "PropertyRegistry": "0x2e95D4F69cC99b54D5C7941A0Ac19a657677ebB6",
+  "KYCIssuer": "0x8464135c8F25Da09e49BC8782676a84730C318bC",
+  "USDC": "0x5dEd3c7441BC7B4E3d12F69462f518C7b49C9388",
+  "deployer": "0xAbdFF83ac5E8E729C6ce44E938f244fB12F6Ce32",
+  "network": "worldchainSepolia",
+  "timestamp": "2025-11-23T10:31:46.150Z",
+  "features": [
+    "KYC_BYPASSED_FOR_TESTING"
+  ],
+  "platformFeeBps": 200
+}
