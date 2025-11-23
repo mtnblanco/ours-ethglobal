@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { KYCStatus } from '@/hooks/useKYC';
+import { useWorldID } from '@/hooks/useWorldID';
+import OnfidoCapture from './OnfidoCapture';
 
 interface KYCModalProps {
   isOpen: boolean;
@@ -26,7 +28,10 @@ export default function KYCModal({
   error,
   statusText
 }: KYCModalProps) {
+  const worldID = useWorldID();
   const [currentStep, setCurrentStep] = useState(1);
+  const [showOnfidoCapture, setShowOnfidoCapture] = useState(false);
+  const [onfidoData, setOnfidoData] = useState<any>(null);
 
   useEffect(() => {
     // Update step based on KYC status
@@ -53,7 +58,76 @@ export default function KYCModal({
     const success = await onRequestKYC();
     if (success) {
       setCurrentStep(2);
+      // Start Onfido process after World ID verification
+      await startOnfidoProcess();
     }
+  };
+
+  const startOnfidoProcess = async () => {
+    if (!worldID.user?.address) {
+      console.error('No user address available');
+      return;
+    }
+
+    try {
+      console.log('🚀 Starting Onfido verification process...');
+
+      // Call backend to start Onfido process
+      const response = await fetch('http://localhost:8001/api/v1/kyc/onfido/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: 'Demo', // In real app, get from user input
+          lastName: 'User',
+          email: 'demo@example.com',
+          userAddress: worldID.user.address,
+          dob: '1990-01-01',
+          address: {
+            flat_number: '1',
+            building_number: '123',
+            building_name: 'Main Building',
+            street: 'Main Street',
+            sub_street: '',
+            town: 'Demo City',
+            postcode: '12345',
+            country: 'ARG'
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to start Onfido process: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setOnfidoData(result.data);
+        setShowOnfidoCapture(true);
+        setCurrentStep(3);
+      } else {
+        throw new Error(result.error || 'Failed to start Onfido process');
+      }
+
+    } catch (error) {
+      console.error('❌ Error starting Onfido process:', error);
+      // Handle error appropriately
+    }
+  };
+
+  const handleOnfidoComplete = (data: any) => {
+    console.log('✅ Onfido verification completed:', data);
+    setShowOnfidoCapture(false);
+    setCurrentStep(4);
+    // The webhook will handle calling fulfillKYC automatically
+  };
+
+  const handleOnfidoError = (error: any) => {
+    console.error('❌ Onfido verification error:', error);
+    setShowOnfidoCapture(false);
+    // Handle error appropriately
   };
 
   const getStepIcon = (step: number) => {
@@ -259,6 +333,24 @@ export default function KYCModal({
                 </button>
               )}
             </div>
+
+            {/* Onfido Document Capture */}
+            {showOnfidoCapture && onfidoData && (
+              <div className="mt-6 p-4 bg-brand-dark/30 rounded-lg">
+                <h3 className="text-lg font-medium text-brand-light mb-3">
+                  📄 Upload Your Documents
+                </h3>
+                <p className="text-sm text-brand-light/70 mb-4">
+                  Please provide a clear photo of your government-issued ID and a selfie for verification.
+                </p>
+                <OnfidoCapture
+                  token={onfidoData.sdkToken}
+                  applicantId={onfidoData.applicantId}
+                  onComplete={handleOnfidoComplete}
+                  onError={handleOnfidoError}
+                />
+              </div>
+            )}
 
             {/* Info Footer */}
             <div className="mt-6 pt-4 border-t border-brand-primary/20">
