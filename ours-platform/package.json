@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.10",
     "@worldcoin/minikit-js": "^1.9.8",
     "ethers": "^6.15.0",
     "framer-motion": "^12.23.24",
@@ -17,7 +18,8 @@
     "onfido-sdk-ui": "^14.57.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "viem": "^2.39.3"
+    "viem": "^2.39.3",
+    "wagmi": "^3.0.1"
   },
   "devDependencies": {
     "@types/node": "^20",

@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import MinikitProviderClient from "./MinikitProviderClient";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { Web3Provider } from "@/components/providers/Web3Provider";
 
 const gothic = localFont({
   src: [
@@ -34,9 +35,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${gothic.variable} font-sans antialiased`}>
-        <AuthProvider>
-          <MinikitProviderClient>{children}</MinikitProviderClient>
-        </AuthProvider>
+        <Web3Provider>
+          <AuthProvider>
+            <MinikitProviderClient>{children}</MinikitProviderClient>
+          </AuthProvider>
+        </Web3Provider>
       </body>
     </html>
   );
