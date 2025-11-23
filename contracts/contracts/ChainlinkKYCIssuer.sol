@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@onchain-id/solidity/contracts/Identity.sol";
 import "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import "../lib/ERC3643/contracts/registry/interface/IIdentityRegistry.sol";
+import "./interfaces/IIdentityRegistry.sol";
 
 /**
  * @title ChainlinkKYCIssuer

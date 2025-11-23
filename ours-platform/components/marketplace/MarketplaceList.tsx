@@ -3,10 +3,33 @@
 import { motion } from 'framer-motion';
 import { MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useAllProperties, usePropertiesWithSales, formatTokenAmount, formatBasisPoints, getPropertyStatusText } from '@/hooks/usePropertyRegistry';
 import LoadingState from './LoadingState';
 import ErrorState from './ErrorState';
 import { PropertyWithSale } from '@/lib/contracts';
+
+// Array de imágenes de fallback de edificios
+const FALLBACK_BUILDING_IMAGES = [
+    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=800&auto=format&fit=crop', // Commercial tower
+    'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=800&auto=format&fit=crop', // Modern apartment
+    'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=800&auto=format&fit=crop', // Luxury building
+    'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=800&auto=format&fit=crop', // Office building
+    'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?q=80&w=800&auto=format&fit=crop', // Residential
+    'https://images.unsplash.com/photo-1502672260066-6bc35f0cdeae?q=80&w=800&auto=format&fit=crop', // Urban complex
+    'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=800&auto=format&fit=crop', // Modern building
+    'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=800&auto=format&fit=crop', // Apartment complex
+];
+
+// Función para obtener una imagen de fallback aleatoria basada en el ID de la propiedad
+function getFallbackImage(propertyId: string): string {
+    // Usar el hash del propertyId para seleccionar una imagen consistente
+    const hash = propertyId.split('').reduce((acc, char) => {
+        return acc + char.charCodeAt(0);
+    }, 0);
+    const index = hash % FALLBACK_BUILDING_IMAGES.length;
+    return FALLBACK_BUILDING_IMAGES[index];
+}
 
 // Helper function to safely check if value exists
 function hasValue(obj: any, key: string | number): boolean {
@@ -215,9 +238,21 @@ function transformPropertyData(propertyWithSale: PropertyWithSale, index: number
 // --- 1. Componente: La Tarjeta de Propiedad (El diseño interno) ---
 const PropertyCard = ({ data }: { data: any }) => {
     const router = useRouter();
+    const [imageSrc, setImageSrc] = useState(data.image);
+    const [imageError, setImageError] = useState(false);
 
     const handleClick = () => {
         router.push(`/marketplace/${data.id}`);
+    };
+
+    // Manejar error de carga de imagen
+    const handleImageError = () => {
+        if (!imageError) {
+            console.log(`❌ Failed to load image for property ${data.id}, using fallback`);
+            const fallbackImage = getFallbackImage(data.id);
+            setImageSrc(fallbackImage);
+            setImageError(true);
+        }
     };
 
     return (
@@ -235,8 +270,9 @@ const PropertyCard = ({ data }: { data: any }) => {
                     </div>
                     {/* Imagen en escala de grises (Grayscale) según referencia */}
                     <img
-                        src={data.image}
+                        src={imageSrc}
                         alt={data.title}
+                        onError={handleImageError}
                         className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
                     />
                 </div>

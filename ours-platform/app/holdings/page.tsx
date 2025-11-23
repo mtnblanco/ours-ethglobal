@@ -10,14 +10,52 @@ import TabNavigation from '@/components/TabNavigation';
 import { useRouter } from 'next/navigation';
 import { useUserHoldings, useUSDCBalance } from '@/hooks/useUserHoldings';
 import { formatTokenAmount } from '@/hooks/usePropertyRegistry';
+import { useMiniKitAuth } from '@/hooks/useMiniKitAuth';
 
 export default function HoldingsPage() {
   const router = useRouter();
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d' | 'all'>('30d');
 
+  // Use MiniKit authentication
+  const { address: userAddress, isConnected, isMiniKit, isLoading: isAuthLoading } = useMiniKitAuth();
+
   // Get real blockchain data
-  const { holdings, isLoading, userAddress } = useUserHoldings();
-  const { formatted: usdcBalance, isLoading: isLoadingUSDC } = useUSDCBalance();
+  const { holdings, isLoading: isLoadingHoldings } = useUserHoldings(userAddress);
+  const { formatted: usdcBalance, balance: usdcBalanceRaw, decimals, isLoading: isLoadingUSDC } = useUSDCBalance(userAddress);
+
+  const isLoading = isAuthLoading || isLoadingHoldings;
+
+  // 🔍 DEBUG: Log all wallet information
+  console.log('========== HOLDINGS PAGE DEBUG ==========');
+  console.log('📍 Auth State:', {
+    userAddress,
+    isConnected,
+    isMiniKit,
+    isAuthLoading,
+  });
+  console.log('💰 USDC Balance:', {
+    raw: usdcBalanceRaw?.toString(),
+    formatted: usdcBalance,
+    decimals,
+    isLoadingUSDC,
+  });
+  console.log('🏠 Holdings:', {
+    count: holdings.length,
+    isLoadingHoldings,
+    holdings: holdings.map(h => ({
+      propertyAddress: h.propertyAddress,
+      propertyName: h.propertyName,
+      tokenBalance: h.tokenBalance.toString(),
+      tokenPrice: h.tokenPrice.toString(),
+    })),
+  });
+  console.log('⏳ Loading States:', {
+    isAuthLoading,
+    isLoadingHoldings,
+    isLoadingUSDC,
+    isLoading,
+  });
+  console.log('========================================');
 
   // Transform blockchain holdings to display format
   const displayHoldings = holdings.map((holding) => {
