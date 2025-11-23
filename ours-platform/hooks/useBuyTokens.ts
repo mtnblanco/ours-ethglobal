@@ -32,9 +32,15 @@ export function useBuyTokens() {
         throw new Error('MiniKit is not installed. Please use World App.');
       }
 
+      // Check if sendTransaction is available
+      if (!MiniKit.commandsAsync?.sendTransaction) {
+        throw new Error('MiniKit sendTransaction is not available. Please update World App.');
+      }
+
       // Calculate total cost in USDC (pricePerToken is in 6 decimals for USDC)
       const totalCost = (tokenAmount * pricePerToken) / BigInt(10 ** 18); // Convert from 18 decimals to raw amount
 
+      console.log('🚀 Starting token purchase...');
       console.log('Buying tokens:', {
         propertyAddress,
         tokenAmount: tokenAmount.toString(),
@@ -42,9 +48,19 @@ export function useBuyTokens() {
         totalCost: totalCost.toString(),
         totalCostFormatted: Number(totalCost) / Math.pow(10, USDC_DECIMALS),
       });
+      console.log('MiniKit info:', {
+        isInstalled: MiniKit.isInstalled(),
+        hasCommandsAsync: !!MiniKit.commandsAsync,
+        hasSendTransaction: !!MiniKit.commandsAsync?.sendTransaction,
+      });
 
       // Step 1: Approve USDC spending
       console.log('Step 1: Approving USDC...');
+      console.log('Approve params:', {
+        usdcAddress: USDC_ADDRESS,
+        spender: CONTRACT_ADDRESSES.SALE_MANAGER,
+        amount: totalCost.toString(),
+      });
       setIsPending(true);
 
       const { finalPayload: approvePayload } = await MiniKit.commandsAsync.sendTransaction({
@@ -58,11 +74,31 @@ export function useBuyTokens() {
         ],
       });
 
+      console.log('Approve response:', approvePayload);
+
       if (approvePayload.status === 'error') {
-        throw new Error(approvePayload.error_code || 'Failed to approve USDC');
+        console.error('Approve error details:', {
+          status: approvePayload.status,
+          error_code: approvePayload.error_code,
+          full_payload: approvePayload,
+        });
+
+        // Handle specific error codes
+        if (approvePayload.error_code === 'disallowed_operation') {
+          throw new Error(
+            'Transaction not allowed. Please ensure:\n' +
+            '1. You are using the latest version of World App\n' +
+            '2. Your app has transaction permissions in Worldcoin Developer Portal\n' +
+            '3. You are on the correct network (World Chain Sepolia)\n' +
+            '4. The USDC contract address is correct for the network'
+          );
+        }
+
+        throw new Error(`Failed to approve USDC: ${approvePayload.error_code || 'Unknown error'}`);
       }
 
       if (approvePayload.status !== 'success') {
+        console.error('Approve not successful:', approvePayload);
         throw new Error('USDC approval was not successful');
       }
 
