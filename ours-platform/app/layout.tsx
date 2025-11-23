@@ -1,6 +1,24 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
 import MinikitProviderClient from "./MinikitProviderClient";
+import { AuthProvider } from "@/contexts/AuthContext";
+
+const gothic = localFont({
+  src: [
+    {
+      path: "../public/fonts/gothic.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/gothicb.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
+  variable: "--font-gothic",
+});
 
 export const metadata: Metadata = {
   title: "Ours - Real Estate Tokenization Platform",
@@ -15,8 +33,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased font-bold">
-        <MinikitProviderClient>{children}</MinikitProviderClient>
+      <body className={`${gothic.variable} font-sans antialiased`}>
+        <AuthProvider>
+          <MinikitProviderClient>{children}</MinikitProviderClient>
+        </AuthProvider>
       </body>
     </html>
   );

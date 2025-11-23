@@ -1,362 +1,60 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
-import { useWeb3, usePropertyMarketplace, formatUSDC, calculateFundingPercentage } from '@/hooks/useContracts';
-import { useKYC } from '@/hooks/useKYC';
-import KYCModal from '@/components/KYCModal';
-
-interface DisplayProperty {
-  id: string;
-  name: string;
-  description: string;
-  location: string;
-  propertyType: string;
-  totalValue: string;
-  tokenPrice: string;
-  fundingProgress: number;
-  status: string;
-}
+import Navbar from '@/components/Navbar';
+import MarketplaceHero from '@/components/marketplace/MarketplaceHero';
+import MarketplaceList from '@/components/marketplace/MarketplaceList';
+import Footer from '@/components/Footer';
+import FilterModal, { FilterValues } from '@/components/marketplace/FilterModal';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import TabNavigation from '@/components/TabNavigation';
 
 export default function MarketplacePage() {
-  const { account, isConnected, connectWallet } = useWeb3();
-  const { properties, loading, purchaseTokens } = usePropertyMarketplace();
-  const kyc = useKYC();
-  const [showKYCModal, setShowKYCModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [category, setCategory] = useState('All');
+  const [filters, setFilters] = useState<FilterValues>({});
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Convert PropertyWithSale[] to DisplayProperty[]
-  const displayProperties: DisplayProperty[] = properties.map((prop, index) => ({
-    id: prop.property.token,
-    name: prop.property.name || `Property ${index + 1}`,
-    description: 'Tokenized real estate investment opportunity with blockchain-verified ownership',
-    location: prop.property.location || 'Location TBD',
-    propertyType: Number(prop.property.totalTokenSupply) > 1000 ? 'Commercial' : 'Residential',
-    totalValue: (Number(prop.property.totalInvestmentTarget) / 1e6).toString(),
-    tokenPrice: (Number(prop.sale.pricePerToken) / 1e6).toString(),
-    fundingProgress: calculateFundingPercentage(prop.sale.totalRaised, prop.property.totalInvestmentTarget),
-    status: prop.saleIsActive ? 'Funding' : 'Closed'
-  }));
-
-  const handleStartTrading = () => {
-    if (!isConnected) {
-      alert('Please verify with World ID first');
-      return;
-    }
-    
-    if (kyc.needsKYC) {
-      setShowKYCModal(true);
-    }
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
   };
 
-  const handlePurchase = async (tokenAddress: string, amount: number) => {
-    if (!isConnected) {
-      alert('Please verify with World ID first');
-      return;
-    }
-    
-    if (!kyc.canInvest) {
-      alert('Please complete KYC verification first');
-      setShowKYCModal(true);
-      return;
-    }
-    
-    try {
-      await purchaseTokens(tokenAddress, amount);
-      alert('Purchase successful! Transaction submitted via World ID.');
-    } catch (error) {
-      console.error('Purchase failed:', error);
-      alert('Purchase failed. Please try again.');
-    }
+  const handleCategoryChange = (newCategory: string) => {
+    setCategory(newCategory);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Funding': return 'text-yellow-400 bg-yellow-400/10';
-      case 'Active': return 'text-green-400 bg-green-400/10';
-      case 'Completed': return 'text-blue-400 bg-blue-400/10';
-      default: return 'text-gray-400 bg-gray-400/10';
-    }
+  const handleFilterClick = () => {
+    setIsFilterModalOpen(true);
   };
 
-  const formatPrice = (price: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0
-    }).format(Number(price));
+  const handleApplyFilters = (newFilters: FilterValues) => {
+    setFilters(newFilters);
   };
 
   return (
-    <div className="min-h-screen bg-brand-dark text-brand-light">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-brand-dark/80 backdrop-blur-md border-b border-brand-primary/20">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <img src="/logo.svg" alt="Ours Logo" className="h-8 w-auto" />
-            <span className="font-bold text-xl tracking-tight">ours</span>
-          </Link>
-          
-          <div className="flex items-center gap-6">
-            <Link href="/" className="text-sm font-medium text-brand-light/80 hover:text-brand-primary transition-colors">
-              Home
-            </Link>
-            <span className="text-sm font-medium text-brand-primary">Marketplace</span>
-            
-            {/* Start Trading Button */}
-            {isConnected && kyc.needsKYC && (
-              <button
-                onClick={handleStartTrading}
-                className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/80 rounded-lg text-white font-medium transition-colors flex items-center gap-2"
-              >
-                🚀 Start Trading
-              </button>
-            )}
-            
-            {/* World ID + KYC Status */}
-            <div className="flex items-center gap-4">
-              {isConnected ? (
-                <div className="flex items-center gap-3">
-                  {/* Wallet Status */}
-                  <div className="flex items-center gap-2 px-3 py-2 bg-brand-primary/10 border border-brand-primary/30 rounded-lg">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    <span className="text-sm font-mono">
-                      {account?.slice(0, 6)}...{account?.slice(-4)}
-                    </span>
-                    <span className="text-xs text-brand-primary">World ID ✓</span>
-                  </div>
-                  
-                  {/* KYC Status */}
-                  {!kyc.needsKYC && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/30 rounded-lg">
-                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                      <span className="text-xs text-green-400">KYC Verified</span>
-                    </div>
-                  )}
-                  
-                  {kyc.needsKYC && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                      <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                      <span className="text-xs text-yellow-400">KYC Required</span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-yellow-400">Connecting World ID...</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-[#FFFBF5] pb-24 md:pb-16 overflow-x-hidden">
+        <Navbar />
+        <TabNavigation />
+        <MarketplaceHero
+          onSearchChange={handleSearchChange}
+          onCategoryChange={handleCategoryChange}
+          onFilterClick={handleFilterClick}
+        />
+        <MarketplaceList
+          searchQuery={searchQuery}
+          category={category}
+          filters={filters}
+        />
+        <Footer />
 
-      {/* Main Content */}
-      <div className="pt-32 pb-12 px-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 text-brand-light">Real Estate Marketplace</h1>
-            <p className="text-xl text-brand-light/70 max-w-2xl mx-auto">
-              Invest in tokenized real estate properties. Own fractions, earn returns, and trade on the blockchain.
-            </p>
-            
-            {/* KYC Status Banner */}
-            {isConnected && (
-              <div className="mt-8 max-w-2xl mx-auto">
-                {kyc.needsKYC ? (
-                  <div className="bg-gradient-to-r from-yellow-500/10 to-brand-primary/10 border border-yellow-500/30 rounded-xl p-6">
-                    <div className="flex items-center justify-center gap-3 mb-4">
-                      <span className="text-2xl">🔐</span>
-                      <h3 className="text-xl font-bold text-brand-light">Complete KYC to Start Trading</h3>
-                    </div>
-                    <p className="text-brand-light/70 mb-4">
-                      Secure identity verification using World ID and Chainlink's decentralized oracle network
-                    </p>
-                    <button
-                      onClick={handleStartTrading}
-                      className="px-6 py-3 bg-gradient-to-r from-brand-primary to-blue-600 hover:from-brand-primary/80 hover:to-blue-700 rounded-lg text-white font-medium transition-colors flex items-center gap-2 mx-auto"
-                    >
-                      🚀 Start KYC Verification
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bg-gradient-to-r from-green-500/10 to-brand-primary/10 border border-green-500/30 rounded-xl p-4">
-                    <div className="flex items-center justify-center gap-3">
-                      <span className="text-2xl">✅</span>
-                      <div className="text-center">
-                        <h3 className="font-bold text-green-400">KYC Verified</h3>
-                        <p className="text-sm text-brand-light/70">You're ready to invest in tokenized real estate</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div className="bg-brand-surface border border-brand-primary/20 rounded-xl p-6 text-center">
-              <h3 className="text-3xl font-bold text-brand-primary mb-2">{displayProperties.length}</h3>
-              <p className="text-brand-light/70">Properties Available</p>
-            </div>
-            <div className="bg-brand-surface border border-brand-primary/20 rounded-xl p-6 text-center">
-              <h3 className="text-3xl font-bold text-brand-primary mb-2">
-                {formatPrice(displayProperties.reduce((sum, p) => sum + Number(p.totalValue), 0).toString())}
-              </h3>
-              <p className="text-brand-light/70">Total Value Locked</p>
-            </div>
-            <div className="bg-brand-surface border border-brand-primary/20 rounded-xl p-6 text-center">
-              <h3 className="text-3xl font-bold text-brand-primary mb-2">7-15%</h3>
-              <p className="text-brand-light/70">Expected Annual Returns</p>
-            </div>
-          </div>
-
-          {/* Loading State */}
-          {loading && (
-            <div className="text-center py-12">
-              <div className="inline-block w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
-              <p className="mt-4 text-brand-light/70">Loading properties...</p>
-            </div>
-          )}
-
-          {/* Properties Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {displayProperties.map((property) => (
-              <div key={property.id} className="bg-brand-surface border border-brand-primary/20 rounded-xl overflow-hidden hover:border-brand-primary/40 transition-colors">
-                {/* Property Image */}
-                <div className="h-48 bg-gradient-to-br from-brand-primary/20 to-brand-primary/5 flex items-center justify-center">
-                  <span className="text-6xl">{property.propertyType === 'Residential' ? '🏠' : '🏢'}</span>
-                </div>
-                
-                {/* Property Details */}
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <h3 className="text-xl font-bold text-brand-light">{property.name}</h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(property.status)}`}>
-                      {property.status}
-                    </span>
-                  </div>
-                  
-                  <p className="text-brand-light/70 mb-4 line-clamp-2">{property.description}</p>
-                  
-                  <div className="space-y-3 mb-6">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-brand-light/70">Location</span>
-                      <span className="text-brand-light">{property.location}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-brand-light/70">Total Value</span>
-                      <span className="text-brand-light font-bold">{formatPrice(property.totalValue)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-brand-light/70">Token Price</span>
-                      <span className="text-brand-light">{formatPrice(property.tokenPrice)} USDC</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-brand-light/70">Funded</span>
-                      <span className="text-brand-light">{property.fundingProgress}%</span>
-                    </div>
-                  </div>
-
-                  {/* Funding Progress Bar */}
-                  <div className="mb-6">
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div 
-                        className="bg-brand-primary h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${property.fundingProgress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Purchase Section */}
-                  {property.status === 'Funding' && (
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          placeholder="Tokens"
-                          min="1"
-                          className="flex-1 px-3 py-2 bg-brand-dark border border-brand-primary/30 rounded-lg text-brand-light placeholder-brand-light/50 focus:outline-none focus:border-brand-primary"
-                          id={`tokens-${property.id}`}
-                        />
-                        <span className="px-3 py-2 text-brand-light/70 text-sm">
-                          × {formatPrice(property.tokenPrice)}
-                        </span>
-                      </div>
-                      
-                      <button
-                        onClick={() => {
-                          const input = document.getElementById(`tokens-${property.id}`) as HTMLInputElement;
-                          const amount = parseInt(input?.value || '1');
-                          if (amount > 0) {
-                            handlePurchase(property.id, amount);
-                          }
-                        }}
-                        disabled={!isConnected || !kyc.canInvest}
-                        className="w-full px-6 py-3 bg-brand-primary hover:bg-brand-primary/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors"
-                      >
-                        {!isConnected ? 'Connecting World ID...' : 
-                         !kyc.canInvest ? 'Complete KYC to Invest' : 
-                         'Purchase with World ID'}
-                      </button>
-                    </div>
-                  )}
-
-                  {property.status === 'Active' && (
-                    <div className="text-center py-3">
-                      <span className="text-green-400 font-medium">🎉 Fully Funded - Generating Returns</span>
-                    </div>
-                  )}
-
-                  {property.status === 'Completed' && (
-                    <div className="text-center py-3">
-                      <span className="text-blue-400 font-medium">✅ Investment Complete</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Empty State */}
-          {!loading && displayProperties.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🏗️</div>
-              <h3 className="text-2xl font-bold text-brand-light mb-4">No Properties Available</h3>
-              <p className="text-brand-light/70 max-w-md mx-auto">
-                Properties will appear here once contracts are deployed and properties are registered.
-              </p>
-              <div className="mt-8 space-y-2">
-                <p className="text-sm text-brand-light/60">Next steps to see properties:</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <span className="px-3 py-1 bg-brand-primary/10 border border-brand-primary/30 rounded text-brand-primary text-xs">
-                    Deploy contracts
-                  </span>
-                  <span className="px-3 py-1 bg-brand-primary/10 border border-brand-primary/30 rounded text-brand-primary text-xs">
-                    Register properties
-                  </span>
-                  <span className="px-3 py-1 bg-brand-primary/10 border border-brand-primary/30 rounded text-brand-primary text-xs">
-                    Start funding
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <FilterModal
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleApplyFilters}
+          currentFilters={filters}
+        />
       </div>
-      
-      {/* KYC Modal */}
-      <KYCModal
-        isOpen={showKYCModal}
-        onClose={() => setShowKYCModal(false)}
-        onRequestKYC={kyc.requestKYC}
-        kycStatus={kyc.kycData?.status || 0}
-        isLoading={kyc.isLoading}
-        error={kyc.error}
-        statusText={kyc.getKYCStatusText()}
-      />
-    </div>
+    </ProtectedRoute>
   );
 }
