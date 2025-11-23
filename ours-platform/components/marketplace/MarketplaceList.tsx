@@ -3,6 +3,52 @@
 import { motion } from 'framer-motion';
 import { MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAllProperties, usePropertiesWithSales, formatTokenAmount, formatBasisPoints, getPropertyStatusText } from '@/hooks/usePropertyRegistry';
+import LoadingState from './LoadingState';
+import ErrorState from './ErrorState';
+import { PropertyWithSale } from '@/lib/contracts';
+
+// Helper function to transform blockchain data to component format
+function transformPropertyData(propertyWithSale: PropertyWithSale, index: number) {
+  const { property, sale, saleIsActive } = propertyWithSale;
+
+  // Calculate funded percentage
+  const totalInvestmentTarget = Number(property.totalInvestmentTarget);
+  const totalRaised = Number(sale.totalRaised);
+  const funded = totalInvestmentTarget > 0
+    ? Math.min(Math.round((totalRaised / totalInvestmentTarget) * 100), 100)
+    : 0;
+
+  // Calculate estimated APY from ROI (simplified)
+  const estimatedSalePrice = Number(property.estimatedSalePrice);
+  const roi = totalInvestmentTarget > 0
+    ? ((estimatedSalePrice - totalInvestmentTarget) / totalInvestmentTarget) * 100
+    : 0;
+  const apy = roi > 0 ? roi / 5 : 0; // Simplified: assume 5 year holding period
+
+  // Format price per token (USDC has 6 decimals)
+  const pricePerToken = formatTokenAmount(sale.pricePerToken, 6);
+
+  // Determine property type from status
+  const statusText = getPropertyStatusText(property.status);
+  const type = property.units > BigInt(10) ? 'RESIDENTIAL' : 'COMMERCIAL';
+
+  return {
+    id: property.token,
+    type: type,
+    title: property.name,
+    location: property.location,
+    apy: apy,
+    price: pricePerToken,
+    funded: funded,
+    image: property.ipfsHash
+      ? `https://ipfs.io/ipfs/${property.ipfsHash}`
+      : `https://images.unsplash.com/photo-${1486406146926 + index}?q=80&w=800&auto=format&fit=crop`,
+    tokenAddress: property.token,
+    isActive: saleIsActive,
+    status: statusText,
+  };
+}
 
 // --- 1. Componente: La Tarjeta de Propiedad (El diseño interno) ---
 const PropertyCard = ({ data }: { data: any }) => {
@@ -254,8 +300,27 @@ const ALL_PROPERTIES = [
 
 // --- 4. Componente Principal: La Lista del Marketplace ---
 export default function MarketplaceList({ searchQuery = '', category = 'All', filters = {} }: MarketplaceListProps) {
+    // Fetch all property addresses from blockchain
+    const { propertyAddresses, isLoading: isLoadingAddresses, error: errorAddresses } = useAllProperties();
+
+    // Fetch detailed property and sale information
+    const { properties: blockchainProperties, isLoading: isLoadingProperties, error: errorProperties, refetch } = usePropertiesWithSales(propertyAddresses);
+
+    // Show loading state
+    if (isLoadingAddresses || isLoadingProperties) {
+        return <LoadingState />;
+    }
+
+    // Show error state
+    if (errorAddresses || errorProperties) {
+        return <ErrorState error={errorAddresses || errorProperties} onRetry={refetch} />;
+    }
+
+    // Transform blockchain data to component format
+    const transformedProperties = blockchainProperties?.map((prop, index) => transformPropertyData(prop, index)) || [];
+
     // Filtrar propiedades basado en búsqueda, categoría y filtros
-    const properties = ALL_PROPERTIES.filter(property => {
+    const properties = transformedProperties.filter(property => {
         // Filtro de búsqueda
         const matchesSearch = !searchQuery ||
             property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
