@@ -1,0 +1,24 @@
+FulfillKYCTest
+├── when the caller lacks CHAINLINK_DON_ROLE
+│   └── it should revert with AccessControlUnauthorizedAccount
+├── when the user address is zero
+│   └── it should revert with InvalidUser
+├── when no KYC request exists for the user
+│   └── it should revert with NoKYCRequest
+├── when the KYC is already approved or rejected
+│   └── it should revert with KYCAlreadyProcessed
+└── when all validations pass
+    ├── when the KYC is approved
+    │   ├── it should update status to Approved
+    │   ├── it should store the kycDataHash
+    │   ├── it should set approvedAt timestamp
+    │   ├── it should create OnchainID identity
+    │   ├── it should increment totalKYCsApproved
+    │   └── it should emit KYCFulfilled event with approved=true
+    └── when the KYC is rejected
+        ├── it should update status to Rejected
+        ├── it should NOT create OnchainID identity
+        ├── it should NOT increment totalKYCsApproved
+        ├── it should set cooldown period
+        └── it should emit KYCFulfilled event with approved=false
+

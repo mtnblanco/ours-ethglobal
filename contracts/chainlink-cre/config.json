@@ -1,0 +1,7 @@
+{
+  "kycIssuerAddress": "0x0000000000000000000000000000000000000000",
+  "onfidoApiToken": "YOUR_ONFIDO_API_TOKEN_HERE",
+  "applicantIdLookupUrl": "http://your-backend/api/onfido/applicant",
+  "lookupApiToken": "YOUR_BACKEND_API_TOKEN"
+}
+
