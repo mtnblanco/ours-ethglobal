@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "backend/fastapi_mock/vercel_app.py": {
+      "runtime": "python3.9"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/backend/fastapi_mock/vercel_app.py"
+    }
+  ]
+}
