@@ -8,6 +8,10 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import TabNavigation from '@/components/TabNavigation';
 import { useAllProperties, usePropertiesWithSales, formatTokenAmount, formatBasisPoints } from '@/hooks/usePropertyRegistry';
+import { useUSDCBalance } from '@/hooks/useUserHoldings';
+import { useBuyTokens } from '@/hooks/useBuyTokens';
+import { useAccount } from 'wagmi';
+import { Address } from 'viem';
 
 export default function PropertyDetailPage() {
     const params = useParams();
@@ -19,14 +23,17 @@ export default function PropertyDetailPage() {
         propertyId: propertyId
     });
 
+    const { address: userAddress } = useAccount();
     const { propertyAddresses, isLoading: isLoadingAddresses } = useAllProperties();
     const { properties: allProperties, isLoading: isLoadingProperties } = usePropertiesWithSales(propertyAddresses);
+    const { formatted: usdcBalance, balance: usdcBalanceRaw, isLoading: isLoadingBalance } = useUSDCBalance();
+    const { buyTokens, isPending, isConfirming, isConfirmed, error: buyError } = useBuyTokens();
 
     const propertyWithSale = allProperties?.find((p: any) => p?.property?.token?.toLowerCase() === propertyId?.toLowerCase());
 
     const [tokenAmount, setTokenAmount] = useState(1);
     const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'documents' | 'location'>('overview');
-    const [userBalance] = useState(1250.50);
+    const [isBuying, setIsBuying] = useState(false);
 
     const isLoading = isLoadingAddresses || isLoadingProperties;
 
@@ -68,11 +75,47 @@ export default function PropertyDetailPage() {
     const property = propertyWithSale.property;
     const sale = propertyWithSale.sale;
 
-    const tokenPrice = sale.pricePerToken ? parseFloat(formatTokenAmount(sale.pricePerToken, 18)) : 0;
+    const tokenPrice = sale.pricePerToken ? parseFloat(formatTokenAmount(sale.pricePerToken, 6)) : 0;
     const totalCost = tokenAmount * tokenPrice;
     const gasFee = 2.50;
     const protocolFee = totalCost * 0.005;
     const grandTotal = totalCost + gasFee + protocolFee;
+
+    const userBalanceNumber = parseFloat(usdcBalance);
+
+    // Handle buy tokens
+    const handleBuyTokens = async () => {
+        if (!userAddress) {
+            alert('Please connect your wallet first');
+            return;
+        }
+
+        if (grandTotal > userBalanceNumber) {
+            alert('Insufficient USDC balance');
+            return;
+        }
+
+        setIsBuying(true);
+
+        try {
+            const result = await buyTokens({
+                propertyAddress: property.token as Address,
+                tokenAmount: BigInt(tokenAmount),
+                pricePerToken: sale.pricePerToken,
+            });
+
+            if (result.success) {
+                alert('Purchase successful! Transaction ID: ' + result.transactionId);
+            } else {
+                alert('Purchase failed: ' + result.error);
+            }
+        } catch (err: any) {
+            console.error('Error buying tokens:', err);
+            alert('Error: ' + err.message);
+        } finally {
+            setIsBuying(false);
+        }
+    };
 
     const fundedPercentage = property.totalInvestmentTarget && sale.totalRaised ? 
         (Number(formatTokenAmount(sale.totalRaised, 18)) / Number(formatTokenAmount(property.totalInvestmentTarget, 18))) * 100 : 0;
@@ -299,16 +342,39 @@ export default function PropertyDetailPage() {
 
                                     <div className="bg-[#E8F4FD] p-3 rounded-lg">
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-[#1E2046]/70">Your Balance</span>
-                                            <span className="font-semibold text-[#1E2046]">${userBalance.toFixed(2)}</span>
+                                            <span className="text-[#1E2046]/70">Your USDC Balance</span>
+                                            <span className="font-semibold text-[#1E2046]">
+                                                {isLoadingBalance ? '...' : `$${usdcBalance}`}
+                                            </span>
                                         </div>
                                     </div>
 
+                                    {buyError && (
+                                        <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+                                            <p className="text-sm text-red-600">{buyError}</p>
+                                        </div>
+                                    )}
+
+                                    {isConfirmed && (
+                                        <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                                            <p className="text-sm text-green-600">Purchase successful!</p>
+                                        </div>
+                                    )}
+
                                     <button
-                                        disabled={grandTotal > userBalance}
+                                        onClick={handleBuyTokens}
+                                        disabled={!userAddress || grandTotal > userBalanceNumber || isBuying || isPending || isConfirming}
                                         className="w-full py-4 rounded-lg font-bold text-lg transition-all bg-[#2D2E63] text-[#B0CBFF] hover:bg-[#1E2046] hover:scale-[1.02] active:scale-[0.98] disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100"
                                     >
-                                        {grandTotal > userBalance ? 'Insufficient Balance' : 'Invest Now'}
+                                        {!userAddress
+                                            ? 'Connect Wallet to Invest'
+                                            : isBuying || isPending
+                                            ? 'Processing...'
+                                            : isConfirming
+                                            ? 'Confirming...'
+                                            : grandTotal > userBalanceNumber
+                                            ? 'Insufficient Balance'
+                                            : 'Invest Now'}
                                     </button>
 
                                     <p className="text-xs text-[#1E2046]/50 text-center">

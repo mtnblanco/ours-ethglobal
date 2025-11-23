@@ -8,49 +8,61 @@ import Footer from '@/components/Footer';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import TabNavigation from '@/components/TabNavigation';
 import { useRouter } from 'next/navigation';
-
-// Mock data - en producción esto vendría de la blockchain/backend
-const mockHoldings = [
-  {
-    id: 'sunset-residence',
-    propertyName: 'Sunset Residence Miami',
-    location: 'Miami, FL',
-    tokens: 150,
-    tokenPrice: 50,
-    totalValue: 7500,
-    purchasePrice: 7200,
-    profitLoss: 300,
-    profitLossPercentage: 4.17,
-    apy: 12.5,
-    monthlyYield: 78.13,
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'downtown-loft',
-    propertyName: 'Downtown Loft NYC',
-    location: 'New York, NY',
-    tokens: 200,
-    tokenPrice: 75,
-    totalValue: 15000,
-    purchasePrice: 14500,
-    profitLoss: 500,
-    profitLossPercentage: 3.45,
-    apy: 10.8,
-    monthlyYield: 135,
-    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
-  },
-];
+import { useUserHoldings, useUSDCBalance } from '@/hooks/useUserHoldings';
+import { formatTokenAmount } from '@/hooks/usePropertyRegistry';
 
 export default function HoldingsPage() {
   const router = useRouter();
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d' | 'all'>('30d');
 
-  const totalPortfolioValue = mockHoldings.reduce((sum, h) => sum + h.totalValue, 0);
-  const totalInvested = mockHoldings.reduce((sum, h) => sum + h.purchasePrice, 0);
+  // Get real blockchain data
+  const { holdings, isLoading, userAddress } = useUserHoldings();
+  const { formatted: usdcBalance, isLoading: isLoadingUSDC } = useUSDCBalance();
+
+  // Transform blockchain holdings to display format
+  const displayHoldings = holdings.map((holding) => {
+    const tokens = Number(formatTokenAmount(holding.tokenBalance, 0));
+    const tokenPrice = Number(formatTokenAmount(holding.tokenPrice, 6));
+    const totalValue = tokens * tokenPrice;
+
+    // Calculate estimated ROI
+    const totalInvestmentTarget = Number(formatTokenAmount(holding.totalInvestmentTarget, 6));
+    const estimatedSalePrice = Number(formatTokenAmount(holding.estimatedSalePrice, 6));
+    const roi = totalInvestmentTarget > 0
+      ? ((estimatedSalePrice - totalInvestmentTarget) / totalInvestmentTarget) * 100
+      : 0;
+    const apy = roi > 0 ? roi / 5 : 0; // Simplified: assume 5 year holding period
+    const monthlyYield = (totalValue * (apy / 100)) / 12;
+
+    // For now, assume purchase price = current value (no historical data)
+    const purchasePrice = totalValue;
+    const profitLoss = 0; // Would need historical purchase data
+    const profitLossPercentage = 0;
+
+    return {
+      id: holding.propertyAddress.toLowerCase(),
+      propertyName: holding.propertyName,
+      location: holding.location,
+      tokens,
+      tokenPrice,
+      totalValue,
+      purchasePrice,
+      profitLoss,
+      profitLossPercentage,
+      apy,
+      monthlyYield,
+      image: holding.ipfsHash
+        ? `https://ipfs.io/ipfs/${holding.ipfsHash}`
+        : 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
+    };
+  });
+
+  const totalPortfolioValue = displayHoldings.reduce((sum, h) => sum + h.totalValue, 0);
+  const totalInvested = displayHoldings.reduce((sum, h) => sum + h.purchasePrice, 0);
   const totalProfitLoss = totalPortfolioValue - totalInvested;
-  const totalProfitLossPercentage = (totalProfitLoss / totalInvested) * 100;
-  const totalMonthlyYield = mockHoldings.reduce((sum, h) => sum + h.monthlyYield, 0);
-  const totalTokens = mockHoldings.reduce((sum, h) => sum + h.tokens, 0);
+  const totalProfitLossPercentage = totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
+  const totalMonthlyYield = displayHoldings.reduce((sum, h) => sum + h.monthlyYield, 0);
+  const totalTokens = displayHoldings.reduce((sum, h) => sum + h.tokens, 0);
 
   return (
     <ProtectedRoute>
@@ -123,7 +135,7 @@ export default function HoldingsPage() {
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                   <p className="text-[#B0CBFF]/80 text-sm mb-1">Properties</p>
-                  <p className="text-white text-xl font-bold">{mockHoldings.length}</p>
+                  <p className="text-white text-xl font-bold">{displayHoldings.length}</p>
                 </div>
               </div>
             </motion.div>
@@ -153,7 +165,19 @@ export default function HoldingsPage() {
                 </div>
               </div>
 
-              {mockHoldings.length === 0 ? (
+              {isLoading ? (
+                <div className="bg-white rounded-3xl border-2 border-black p-12 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2D2E63] mx-auto mb-4"></div>
+                  <h3 className="text-2xl font-bold text-[#1E2046] mb-2">Loading your holdings...</h3>
+                  <p className="text-[#1E2046]/60">Fetching data from blockchain</p>
+                </div>
+              ) : !userAddress ? (
+                <div className="bg-white rounded-3xl border-2 border-black p-12 text-center">
+                  <Wallet className="w-16 h-16 text-[#1E2046]/30 mx-auto mb-4" />
+                  <h3 className="text-2xl font-bold text-[#1E2046] mb-2">Connect Your Wallet</h3>
+                  <p className="text-[#1E2046]/60 mb-6">Connect your wallet to view your holdings</p>
+                </div>
+              ) : displayHoldings.length === 0 ? (
                 <div className="bg-white rounded-3xl border-2 border-black p-12 text-center">
                   <PieChart className="w-16 h-16 text-[#1E2046]/30 mx-auto mb-4" />
                   <h3 className="text-2xl font-bold text-[#1E2046] mb-2">No Holdings Yet</h3>
@@ -167,7 +191,7 @@ export default function HoldingsPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {mockHoldings.map((holding, index) => (
+                  {displayHoldings.map((holding, index) => (
                     <motion.div
                       key={holding.id}
                       initial={{ opacity: 0, y: 20 }}
