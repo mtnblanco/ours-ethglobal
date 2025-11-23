@@ -155,7 +155,8 @@ contract CreateDistributionTest is BaseTest {
     
     /// @dev when the property is not registered
     function test_RevertWhen_ThePropertyIsNotRegistered() external {
-        address unregisteredToken = address(new MockERC3643Token("Unregistered", "UNREG"));
+        // address unregisteredToken = address(new MockERC3643Token("Unregistered", "UNREG"));
+        address unregisteredToken = address(0x456); // Temporary fix for compilation
         
         vm.startPrank(propertyIssuer);
         vm.expectRevert(RevenueDistributor.PropertyNotRegistered.selector);

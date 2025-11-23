@@ -6,7 +6,31 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@onchain-id/solidity/contracts/Identity.sol";
 import "@onchain-id/solidity/contracts/interface/IIdentity.sol";
-import "../lib/ERC3643/contracts/registry/interface/IIdentityRegistry.sol";
+import "./interfaces/IIdentityRegistry.sol";
+
+/**
+ * @title IWorldIDRouter
+ * @notice Interface for World ID Router contract for proof verification
+ */
+interface IWorldIDRouter {
+    /**
+     * @notice Verifies a World ID proof
+     * @param root The root of the Merkle tree
+     * @param groupId The group identifier (1 for phone, 2 for orb)
+     * @param signalHash The signal hash
+     * @param nullifierHash The nullifier hash
+     * @param externalNullifierHash The external nullifier hash (app identifier)
+     * @param proof The ZK proof
+     */
+    function verifyProof(
+        uint256 root,
+        uint256 groupId,
+        uint256 signalHash,
+        uint256 nullifierHash,
+        uint256 externalNullifierHash,
+        uint256[8] calldata proof
+    ) external view;
+}
 
 /**
  * @title ChainlinkKYCIssuer
@@ -464,22 +488,23 @@ contract ChainlinkKYCIssuer is AccessControl, Pausable, ReentrancyGuard {
      * @notice Verifica un World ID proof llamando al router oficial
      * @dev Esta es la parte MÁS CRÍTICA de seguridad
      * 
-     * POR QUÉ DELEGAR A WORLD ID ROUTER:
-     * - World mantiene el Merkle tree de usuarios verificados
-     * - Verificación ZK requiere lógica compleja (SNARKs)
-     * - No queremos reimplementar → usamos su contrato
-     * - Si hay bug en verificación → World lo patchea
+     * IMPLEMENTACIÓN EN PRODUCCIÓN:
+     * - Llamamos al World ID Router oficial para verificar el proof
+     * - Si la verificación falla, el router hará revert automáticamente
+     * - Usamos groupId = 1 (phone verified) para mayor accesibilidad
+     * - Signal se convierte a field element usando hash
+     * - App ID se convierte a external nullifier hash
      * 
-     * QUÉ VERIFICA:
-     * 1. Proof es matemáticamente válido (ZK-SNARK)
-     * 2. Nullifier pertenece a alguien en el Merkle tree
-     * 3. Root coincide con estado actual de World ID
-     * 4. Signal es el esperado (nuestra app)
+     * SEGURIDAD:
+     * - World ID Router usa pairing checks (BN254 curve)
+     * - Verificación ZK matemáticamente imposible de falsificar
+     * - Root debe coincidir con estado actual de World ID tree
+     * - Nullifier debe pertenecer a alguien verificado en World
      * 
-     * @param signal Señal de la app
-     * @param root Merkle root
-     * @param nullifierHash Nullifier único
-     * @param proof ZK proof [8 elementos]
+     * @param signal Señal de la app (debe ser único y específico)
+     * @param root Merkle root del estado actual de World ID
+     * @param nullifierHash Nullifier único del usuario
+     * @param proof ZK proof [8 elementos] generado por World ID
      */
     function _verifyWorldIDProof(
         uint256 signal,
@@ -487,27 +512,42 @@ contract ChainlinkKYCIssuer is AccessControl, Pausable, ReentrancyGuard {
         uint256 nullifierHash,
         uint256[8] calldata proof
     ) internal view {
-        // TODO: En producción, llamaríamos al World ID Router:
-        // IWorldIDRouter(worldIdRouter).verifyProof(
-        //     root,
-        //     1, // groupId (1 = phone verified, 2 = orb verified)
-        //     abi.encodePacked(signal).hashToField(),
-        //     nullifierHash,
-        //     abi.encodePacked(worldAppId).hashToField(),
-        //     proof
-        // );
-        
-        // Para MVP/testing: asumimos válido
-        // En producción: si verifyProof() revierte → proof inválido
-        
-        // POR QUÉ NO IMPLEMENTAMOS VERIFICACIÓN NOSOTROS:
-        // - Requiere pairing checks (BN254 curve)
-        // - Muy costoso en gas
-        // - World ya lo hace óptimamente
-        
+        // Validaciones básicas antes de llamar al router
         if (signal == 0 || root == 0 || nullifierHash == 0) {
             revert InvalidWorldIDProof();
         }
+        
+        // Convertir signal a field element (hash del signal)
+        uint256 signalHash = _hashToField(abi.encodePacked(signal));
+        
+        // Convertir App ID a external nullifier (identificador único de nuestra app)
+        uint256 externalNullifierHash = _hashToField(abi.encodePacked(worldAppId));
+        
+        // LLAMADA AL WORLD ID ROUTER OFICIAL
+        // Si el proof es inválido, verifyProof() hará revert automáticamente
+        try IWorldIDRouter(worldIdRouter).verifyProof(
+            root,
+            1, // groupId: 1 = phone verified (más accesible que orb)
+            signalHash,
+            nullifierHash,
+            externalNullifierHash,
+            proof
+        ) {
+            // Verificación exitosa - continuamos
+        } catch {
+            // Cualquier error en verificación = proof inválido
+            revert InvalidWorldIDProof();
+        }
+    }
+
+    /**
+     * @notice Convierte datos a field element usando keccak256
+     * @dev World ID requiere que señales y app IDs sean field elements
+     * @param data Datos a convertir
+     * @return Field element resultante
+     */
+    function _hashToField(bytes memory data) internal pure returns (uint256) {
+        return uint256(keccak256(data)) >> 8; // Reducir a 248 bits para BN254
     }
 
     /**
