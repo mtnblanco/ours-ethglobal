@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, TrendingUp, Users, Calendar } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import TabNavigation from '@/components/TabNavigation';
 
 // Mock data - matches MarketplaceList properties
 const ALL_PROPERTIES = [
@@ -377,8 +378,9 @@ export default function PropertyDetailPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-[#FFFBF5] overflow-x-hidden">
+        <div className="min-h-screen bg-[#FFFBF5] pb-24 md:pb-16 overflow-x-hidden">
             <Navbar />
+            <TabNavigation />
 
             <main className="pt-32 pb-16 px-4 md:px-6 overflow-x-hidden">
                 <div className="container mx-auto max-w-7xl">

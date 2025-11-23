@@ -7,6 +7,7 @@ import MarketplaceList from '@/components/marketplace/MarketplaceList';
 import Footer from '@/components/Footer';
 import FilterModal, { FilterValues } from '@/components/marketplace/FilterModal';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import TabNavigation from '@/components/TabNavigation';
 
 export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,8 +33,9 @@ export default function MarketplacePage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#FFFBF5] overflow-x-hidden">
+      <div className="min-h-screen bg-[#FFFBF5] pb-24 md:pb-16 overflow-x-hidden">
         <Navbar />
+        <TabNavigation />
         <MarketplaceHero
           onSearchChange={handleSearchChange}
           onCategoryChange={handleCategoryChange}
