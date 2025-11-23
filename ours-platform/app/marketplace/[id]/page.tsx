@@ -1,43 +1,113 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, MapPin, TrendingUp, Users, Calendar } from 'lucide-react';
+import { ArrowLeft, MapPin, TrendingUp, Users, Wallet, CheckCircle, XCircle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import TabNavigation from '@/components/TabNavigation';
-import { useAllProperties, usePropertiesWithSales, formatTokenAmount, formatBasisPoints } from '@/hooks/usePropertyRegistry';
+import { useAllProperties, usePropertiesWithSales, formatTokenAmount } from '@/hooks/usePropertyRegistry';
 import { useUSDCBalance } from '@/hooks/useUserHoldings';
-import { useBuyTokens } from '@/hooks/useBuyTokens';
 import { useMiniKitAuth } from '@/hooks/useMiniKitAuth';
-import { Address } from 'viem';
+// Import MiniKit specific types and library
+import { MiniKit, tokenToDecimals, Tokens, PayCommandInput, ResponseEvent, MiniAppPaymentPayload } from '@worldcoin/minikit-js';
+
+// Component to display status messages
+const StatusMessage = ({ message, type }: { message: string, type: 'error' | 'success' | 'loading' }) => (
+    <div className={`p-3 rounded-lg flex items-start gap-3 ${
+        type === 'error' ? 'bg-red-50 border border-red-200 text-red-600' : 
+        type === 'success' ? 'bg-green-50 border border-green-200 text-green-600' :
+        'bg-blue-50 border border-blue-200 text-blue-600'
+    }`}>
+        {type === 'error' && <XCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />}
+        {type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />}
+        {type === 'loading' && <div className="w-5 h-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin flex-shrink-0 mt-0.5" />}
+        <p className="text-sm">{message}</p>
+    </div>
+);
 
 export default function PropertyDetailPage() {
     const params = useParams();
     const router = useRouter();
     const propertyId = params.id as string;
 
-    console.log('🔍 Debug PropertyDetailPage:', {
-        params,
-        propertyId: propertyId
-    });
-
-    // Use MiniKit authentication instead of Wagmi
-    const { address: userAddress, isConnected, isMiniKit, authenticate } = useMiniKitAuth();
+    // Hooks
+    const { address: userAddress, isMiniKit, authenticate, isLoadingAuth } = useMiniKitAuth();
     const { propertyAddresses, isLoading: isLoadingAddresses } = useAllProperties();
     const { properties: allProperties, isLoading: isLoadingProperties } = usePropertiesWithSales(propertyAddresses);
     const { formatted: usdcBalance, balance: usdcBalanceRaw, isLoading: isLoadingBalance } = useUSDCBalance(userAddress);
-    const { buyTokens, isPending, isConfirming, isConfirmed, error: buyError } = useBuyTokens();
 
     const propertyWithSale = allProperties?.find((p: any) => p?.property?.token?.toLowerCase() === propertyId?.toLowerCase());
 
     const [tokenAmount, setTokenAmount] = useState(1);
-    const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'documents' | 'location'>('overview');
-    const [isBuying, setIsBuying] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [statusMessage, setStatusMessage] = useState<{ type: 'error' | 'success' | 'loading', message: string } | null>(null);
 
-    const isLoading = isLoadingAddresses || isLoadingProperties;
+    const isLoading = isLoadingAddresses || isLoadingProperties || isLoadingAuth;
 
+    /**
+     * Auto-Authentication Effect
+     */
+    useEffect(() => {
+        if (isMiniKit && !userAddress && !isLoadingAuth) {
+            console.log("MiniKit detected. Attempting auto-authentication...");
+            authenticate().then(address => {
+                if (address) {
+                    setStatusMessage(null);
+                }
+            }).catch(e => {
+                console.error("Auto-authentication failed:", e);
+                setStatusMessage({ type: 'error', message: 'Failed to auto-connect wallet. Please check your World App.' });
+            });
+        }
+    }, [isMiniKit, userAddress, isLoadingAuth, authenticate]);
+
+    /**
+     * Listener for Payment Response (Step 3 & 4 of the Payment Flow)
+     */
+    useEffect(() => {
+        if (!MiniKit.isInstalled()) return;
+
+        MiniKit.subscribe(
+            ResponseEvent.MiniAppPayment,
+            async (response: MiniAppPaymentPayload) => {
+                if (response.status === "success") {
+                    setStatusMessage({ type: 'loading', message: 'Payment sent! Verifying transaction...' });
+                    
+                    try {
+                        // Step 4: Verify the payment in the backend
+                        const res = await fetch(`/api/confirm-payment`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(response),
+                        });
+                        const payment = await res.json();
+                        
+                        if (payment.success) {
+                            setStatusMessage({ type: 'success', message: 'Investment successful! Tokens will appear shortly.' });
+                            setIsProcessing(false);
+                        } else {
+                            setStatusMessage({ type: 'error', message: 'Payment verification failed.' });
+                            setIsProcessing(false);
+                        }
+                    } catch (error) {
+                        setStatusMessage({ type: 'error', message: 'Server error verifying payment.' });
+                        setIsProcessing(false);
+                    }
+                } else {
+                    setStatusMessage({ type: 'error', message: 'Transaction cancelled or failed.' });
+                    setIsProcessing(false);
+                }
+            }
+        );
+
+        return () => {
+            MiniKit.unsubscribe(ResponseEvent.MiniAppPayment);
+        };
+    }, []);
+
+    // --- Loading State ---
     if (isLoading) {
         return (
             <div className="min-h-screen bg-[#FFFBF5] flex items-center justify-center overflow-x-hidden">
@@ -50,18 +120,14 @@ export default function PropertyDetailPage() {
         );
     }
 
+    // --- Not Found State ---
     if (!propertyWithSale) {
         return (
             <div className="min-h-screen bg-[#FFFBF5] flex items-center justify-center overflow-x-hidden">
                 <Navbar />
                 <div className="text-center pt-32 px-6">
                     <h1 className="text-4xl font-bold text-[#1E2046] mb-4">Property Not Found</h1>
-                    <p className="text-gray-600 mb-4">
-                        Property ID: {propertyId}
-                    </p>
-                    <p className="text-gray-600 mb-6">
-                        Available properties: {allProperties?.length || 0}
-                    </p>
+                    <p className="text-gray-600 mb-4">Property ID: {propertyId}</p>
                     <button
                         onClick={() => router.push('/marketplace')}
                         className="px-6 py-3 bg-[#2D2E63] text-[#B0CBFF] rounded-lg hover:bg-[#1E2046] transition-colors"
@@ -76,117 +142,22 @@ export default function PropertyDetailPage() {
     const property = propertyWithSale.property;
     const sale = propertyWithSale.sale;
 
-    // 🔍 DEBUG: Log raw sale data
-    console.log('🔍 Raw Sale Data:', {
-        pricePerTokenRaw: sale.pricePerToken?.toString(),
-        pricePerTokenType: typeof sale.pricePerToken,
-    });
-
+    // --- Calculations ---
     const tokenPrice = sale.pricePerToken ? parseFloat(formatTokenAmount(sale.pricePerToken, 6)) : 0;
     const totalCost = tokenAmount * tokenPrice;
-
-    // Calculate what the ACTUAL cost will be in the smart contract
+    
+    // Exact BigInt math for the transaction
     const pricePerTokenBigInt = sale.pricePerToken || BigInt(0);
     const tokenAmountBigInt = BigInt(tokenAmount);
-    const actualTotalCostRaw = (tokenAmountBigInt * pricePerTokenBigInt) / BigInt(10 ** 18);
+    // USDC has 6 decimals
+    const actualTotalCostRaw = (tokenAmountBigInt * pricePerTokenBigInt) / BigInt(10 ** 18); 
     const actualTotalCostFormatted = Number(actualTotalCostRaw) / Math.pow(10, 6);
 
-    const gasFee = 2.50;
+    // Fees
+    const gasFee = 0.00; // World App sponsors gas usually, setting to 0 or low estimate
     const protocolFee = totalCost * 0.005;
     const grandTotal = totalCost + gasFee + protocolFee;
-
-    const userBalanceNumber = parseFloat(usdcBalance);
     const userBalanceRawNumber = Number(usdcBalanceRaw) / Math.pow(10, 6);
-
-    // 🔍 DEBUG: Log balance comparison
-    console.log('💰 Buy Tokens Balance Check:', {
-        tokenPrice,
-        tokenAmount,
-        totalCost,
-        actualTotalCostRaw: actualTotalCostRaw.toString(),
-        actualTotalCostFormatted,
-        gasFee,
-        protocolFee,
-        grandTotal,
-        usdcBalance,
-        usdcBalanceRaw: usdcBalanceRaw?.toString(),
-        userBalanceNumber,
-        userBalanceRawNumber,
-        hasEnough: actualTotalCostFormatted <= userBalanceRawNumber,
-        difference: userBalanceRawNumber - actualTotalCostFormatted,
-    });
-
-    // Handle buy tokens
-    const handleBuyTokens = async () => {
-        // Check if in MiniKit environment
-        if (!isMiniKit) {
-            alert(
-                '🌍 World App Required\n\n' +
-                'To make investments, you need to open this app inside World App.\n\n' +
-                'Steps:\n' +
-                '1. Open World App on your phone\n' +
-                '2. Go to Mini Apps section\n' +
-                '3. Enter the app URL or scan QR code\n\n' +
-                'Currently browsing in regular browser - transactions are not available.'
-            );
-            return;
-        }
-
-        if (!userAddress) {
-            // Try to authenticate
-            const address = await authenticate();
-            if (!address) {
-                alert('Failed to authenticate with World App');
-                return;
-            }
-        }
-
-        // Calculate the actual USDC cost (matching smart contract calculation)
-        const actualCostInUSDC = actualTotalCostFormatted;
-        const userUSDCBalance = userBalanceRawNumber;
-
-        // Only check actualCost (USDC needed), not gas fees (paid in native token)
-        if (actualCostInUSDC > userUSDCBalance) {
-            console.error('❌ Insufficient balance:', {
-                needed: actualCostInUSDC,
-                available: userUSDCBalance,
-                difference: userUSDCBalance - actualCostInUSDC,
-                rawNeeded: actualTotalCostRaw.toString(),
-                rawAvailable: usdcBalanceRaw?.toString(),
-            });
-            alert(`Insufficient USDC balance. Need $${actualCostInUSDC.toFixed(2)} but have $${userUSDCBalance.toFixed(2)}`);
-            return;
-        }
-
-        console.log('✅ Proceeding with purchase:', {
-            actualCostInUSDC,
-            userUSDCBalance,
-            rawCost: actualTotalCostRaw.toString(),
-            rawBalance: usdcBalanceRaw?.toString(),
-        });
-
-        setIsBuying(true);
-
-        try {
-            const result = await buyTokens({
-                propertyAddress: property.token as Address,
-                tokenAmount: BigInt(tokenAmount),
-                pricePerToken: sale.pricePerToken,
-            });
-
-            if (result.success) {
-                alert('Purchase successful! Transaction ID: ' + result.transactionId);
-                // Optionally refresh the page or balances
-            } else {
-                alert('Purchase failed: ' + result.error);
-            }
-        } catch (err: any) {
-            console.error('Error buying tokens:', err);
-            alert('Error: ' + err.message);
-        } finally {
-            setIsBuying(false);
-        }
-    };
 
     const fundedPercentage = property.totalInvestmentTarget && sale.totalRaised ? 
         (Number(formatTokenAmount(sale.totalRaised, 18)) / Number(formatTokenAmount(property.totalInvestmentTarget, 18))) * 100 : 0;
@@ -198,12 +169,76 @@ export default function PropertyDetailPage() {
         image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=800&auto=format&fit=crop',
         description: 'Real estate investment opportunity on the blockchain.',
         highlights: [
-            'Blockchain-verified ownership',
+            'Verified blockchain property',
             'Transparent smart contracts',
             'Fractional investment opportunity',
             'Professional property management'
         ]
     };
+
+    /**
+     * Handle Buy Tokens (Step 1 & 2 of Payment Flow)
+     */
+    const handleBuyTokens = async () => {
+        setStatusMessage(null);
+
+        // 1. Environment Check
+        if (!isMiniKit) {
+            setStatusMessage({ type: 'error', message: '🌍 World App Required: You must open this inside World App to invest.' });
+            return;
+        }
+        
+        // 2. Auth Check
+        if (!userAddress) {
+            setStatusMessage({ type: 'loading', message: 'Connecting wallet... Please approve in World App.' });
+            try {
+                const address = await authenticate();
+                if (!address) return; // Error handled in auth hook usually
+            } catch (e) {
+                setStatusMessage({ type: 'error', message: 'Wallet connection failed.' });
+                return;
+            }
+        }
+
+        // 3. Balance Check
+        if (actualTotalCostFormatted > userBalanceRawNumber) {
+            setStatusMessage({ type: 'error', message: `Insufficient USDC. You need $${actualTotalCostFormatted.toFixed(2)} but have $${userBalanceRawNumber.toFixed(2)}` });
+            return;
+        }
+
+        setIsProcessing(true);
+        setStatusMessage({ type: 'loading', message: 'Initiating payment...' });
+
+        try {
+            // Step 1: Initiate Payment (Get Reference ID)
+            const res = await fetch('/api/initiate-payment', { method: 'POST' });
+            if (!res.ok) throw new Error("Failed to initiate payment");
+            const { id } = await res.json();
+
+            // Step 2: Trigger MiniKit Pay Command
+            const payload: PayCommandInput = {
+                reference: id,
+                to: property.token, // Address receiving the funds (The Property Contract)
+                tokens: [
+                    {
+                        symbol: Tokens.USDC,
+                        token_amount: tokenToDecimals(actualTotalCostFormatted, Tokens.USDC).toString(),
+                    },
+                ],
+                description: `Investment in ${displayData.title}`,
+            };
+
+            MiniKit.commands.pay(payload);
+            // The flow continues in the useEffect listener...
+
+        } catch (err: any) {
+            console.error('Error buying tokens:', err);
+            setStatusMessage({ type: 'error', message: 'Unexpected error: ' + err.message });
+            setIsProcessing(false);
+        }
+    };
+
+    const formatAddress = (address: string) => `${address.slice(0, 6)}...${address.slice(-4)}`;
 
     return (
         <div className="min-h-screen bg-[#FFFBF5] pb-24 md:pb-16 overflow-x-hidden">
@@ -245,6 +280,7 @@ export default function PropertyDetailPage() {
                     </motion.div>
 
                     <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+                        {/* LEFT COLUMN: DETAILS */}
                         <div className="lg:col-span-2 space-y-6">
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -252,14 +288,11 @@ export default function PropertyDetailPage() {
                                 transition={{ delay: 0.1 }}
                                 className="relative aspect-[16/10] rounded-2xl overflow-hidden"
                             >
-                                <img
-                                    src={displayData.image}
-                                    alt={displayData.title}
-                                    className="w-full h-full object-cover"
-                                />
+                                <img src={displayData.image} alt={displayData.title} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                             </motion.div>
 
+                            {/* Funding Progress */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -300,6 +333,7 @@ export default function PropertyDetailPage() {
                                 </div>
                             </motion.div>
 
+                            {/* Info */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -309,10 +343,8 @@ export default function PropertyDetailPage() {
                                 <div className="p-6">
                                     <div className="space-y-6">
                                         <div>
-                                            <h3 className="text-lg font-bold text-[#1E2046] mb-3">About This Property</h3>
-                                            <p className="text-[#1E2046]/70 leading-relaxed">
-                                                {displayData.description}
-                                            </p>
+                                            <h3 className="text-lg font-bold text-[#1E2046] mb-3">About this Property</h3>
+                                            <p className="text-[#1E2046]/70 leading-relaxed">{displayData.description}</p>
                                         </div>
                                         <div>
                                             <h4 className="text-md font-bold text-[#1E2046] mb-3">Key Highlights</h4>
@@ -340,9 +372,7 @@ export default function PropertyDetailPage() {
                                                     <TrendingUp className="w-4 h-4 text-[#2D2E63]" />
                                                     <span className="text-sm font-semibold text-[#1E2046]/70">Price per Token</span>
                                                 </div>
-                                                <p className="text-lg font-bold text-[#1E2046]">
-                                                    ${tokenPrice.toFixed(2)}
-                                                </p>
+                                                <p className="text-lg font-bold text-[#1E2046]">${tokenPrice.toFixed(2)}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -350,6 +380,7 @@ export default function PropertyDetailPage() {
                             </motion.div>
                         </div>
 
+                        {/* RIGHT COLUMN: INVESTMENT ACTION */}
                         <div className="lg:col-span-1">
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -357,13 +388,32 @@ export default function PropertyDetailPage() {
                                 transition={{ delay: 0.4 }}
                                 className="bg-white rounded-xl p-6 border border-[#E4F0FF] sticky top-8"
                             >
-                                <h2 className="text-xl font-bold text-[#1E2046] mb-4">Invest in This Property</h2>
+                                <h2 className="text-xl font-bold text-[#1E2046] mb-4">Invest in this Property</h2>
                                 
+                                <div className="bg-[#F8FAFC] p-4 rounded-lg mb-4">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Wallet className="w-4 h-4 text-[#2D2E63]" />
+                                            <span className="font-semibold text-[#1E2046]">Wallet</span>
+                                        </div>
+                                        {userAddress ? (
+                                            <span className="font-mono text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                                                {formatAddress(userAddress)}
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                                                Disconnected
+                                            </span>
+                                        )}
+                                    </div>
+                                    {!isMiniKit && (
+                                        <p className="text-xs text-red-500 mt-2">*Transactions available only in World App.</p>
+                                    )}
+                                </div>
+
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-semibold text-[#1E2046] mb-2">
-                                            Number of Tokens
-                                        </label>
+                                        <label className="block text-sm font-semibold text-[#1E2046] mb-2">Token Quantity</label>
                                         <div className="flex">
                                             <button
                                                 onClick={() => setTokenAmount(Math.max(1, tokenAmount - 1))}
@@ -397,91 +447,37 @@ export default function PropertyDetailPage() {
                                             <span className="font-semibold text-[#1E2046]">${totalCost.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-sm text-[#1E2046]/70">Gas Fee</span>
-                                            <span className="font-semibold text-[#1E2046]">${gasFee.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
                                             <span className="text-sm text-[#1E2046]/70">Protocol Fee (0.5%)</span>
                                             <span className="font-semibold text-[#1E2046]">${protocolFee.toFixed(2)}</span>
                                         </div>
                                         <hr className="border-[#E4F0FF]" />
                                         <div className="flex justify-between">
-                                            <span className="font-bold text-[#1E2046]">Total</span>
+                                            <span className="font-bold text-[#1E2046]">Total (USDC)</span>
                                             <span className="font-bold text-[#1E2046] text-xl">${grandTotal.toFixed(2)}</span>
                                         </div>
                                     </div>
-
-                                    <div className="bg-[#E8F4FD] p-3 rounded-lg">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-[#1E2046]/70">Your USDC Balance</span>
-                                            <span className="font-semibold text-[#1E2046]">
-                                                {isLoadingBalance ? '...' : `$${usdcBalance}`}
-                                            </span>
-                                        </div>
-                                        {userAddress && parseFloat(usdcBalance) === 0 && (
-                                            <div className="mt-2 pt-2 border-t border-[#1E2046]/10">
-                                                <p className="text-xs text-[#1E2046]/60 mb-1">Need testnet USDC?</p>
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={userAddress}
-                                                        readOnly
-                                                        className="text-xs font-mono bg-white px-2 py-1 rounded border border-[#1E2046]/20 flex-1"
-                                                    />
-                                                    <button
-                                                        onClick={() => {
-                                                            navigator.clipboard.writeText(userAddress);
-                                                            alert('Address copied!');
-                                                        }}
-                                                        className="px-2 py-1 bg-[#2D2E63] text-[#B0CBFF] rounded text-xs font-semibold hover:bg-[#1E2046]"
-                                                    >
-                                                        Copy
-                                                    </button>
-                                                </div>
-                                                <a
-                                                    href="https://faucet.circle.com/"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="mt-2 inline-block text-xs text-blue-600 hover:underline"
-                                                >
-                                                    → Get USDC from Circle Faucet (Select World Chain Sepolia)
-                                                </a>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {buyError && (
-                                        <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
-                                            <p className="text-sm text-red-600">{buyError}</p>
-                                        </div>
-                                    )}
-
-                                    {isConfirmed && (
-                                        <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                                            <p className="text-sm text-green-600">Purchase successful!</p>
-                                        </div>
+                                    {/* Status Messages */}
+                                    {statusMessage && (
+                                        <StatusMessage 
+                                            message={statusMessage.message} 
+                                            type={statusMessage.type} 
+                                        />
                                     )}
 
                                     <button
                                         onClick={handleBuyTokens}
-                                        disabled={!isMiniKit || actualTotalCostFormatted > userBalanceRawNumber || isBuying || isPending || isConfirming}
+                                        disabled={!isMiniKit || !userAddress || actualTotalCostFormatted > userBalanceRawNumber || isProcessing}
                                         className="w-full py-4 rounded-lg font-bold text-lg transition-all bg-[#2D2E63] text-[#B0CBFF] hover:bg-[#1E2046] hover:scale-[1.02] active:scale-[0.98] disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100"
                                     >
-                                        {!isMiniKit
-                                            ? 'Open in World App to Invest'
-                                            : isPending
-                                            ? 'Approving USDC...'
-                                            : isConfirming
-                                            ? 'Confirming Purchase...'
-                                            : isBuying
-                                            ? 'Processing...'
-                                            : actualTotalCostFormatted > userBalanceRawNumber
-                                            ? 'Insufficient Balance'
+                                        {!isMiniKit ? 'Open in World App to Invest'
+                                            : !userAddress ? 'Connect Wallet'
+                                            : isProcessing ? 'Processing Payment...'
+                                            : actualTotalCostFormatted > userBalanceRawNumber ? 'Insufficient Balance'
                                             : 'Invest Now'}
                                     </button>
 
                                     <p className="text-xs text-[#1E2046]/50 text-center">
-                                        By investing, you agree to our terms and conditions
+                                        By investing, you agree to our terms and conditions.
                                     </p>
                                 </div>
                             </motion.div>
@@ -489,7 +485,6 @@ export default function PropertyDetailPage() {
                     </div>
                 </div>
             </main>
-
             <Footer />
         </div>
     );

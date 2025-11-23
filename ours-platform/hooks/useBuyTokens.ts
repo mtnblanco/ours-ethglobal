@@ -1,15 +1,20 @@
 import { useState, useCallback } from 'react';
 import { Address, erc20Abi } from 'viem';
-import { CONTRACT_ADDRESSES, SALE_MANAGER_ABI } from '@/lib/contracts';
 import { MiniKit } from '@worldcoin/minikit-js';
 
+// Asumimos que esta importación trae los ABI y direcciones necesarias
+import { CONTRACT_ADDRESSES, SALE_MANAGER_ABI } from '@/lib/contracts';
+
+// Las variables de entorno DEBEN estar configuradas para World Chain Sepolia
+// USDC_ADDRESS para WCS: 0x5dEd3c7441BC7B4E3d12F69462f518C7b49C9388
 const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS as Address;
 const USDC_DECIMALS = 6;
+const PROPERTY_TOKEN_DECIMALS = 18; // Asumimos que el token de la propiedad usa 18 decimales
 
 export interface BuyTokensParams {
   propertyAddress: Address;
-  tokenAmount: bigint;
-  pricePerToken: bigint;
+  tokenAmount: bigint; // Cantidad del token de la propiedad (asumimos 18 decimales)
+  pricePerToken: bigint; // Precio por token de la propiedad en USDC (asumimos 6 decimales)
 }
 
 export function useBuyTokens() {
@@ -28,55 +33,34 @@ export function useBuyTokens() {
       setIsPending(true);
       setIsConfirmed(false);
 
-      // Check if MiniKit is installed safely
-      let miniKitInstalled = false;
-      try {
-        miniKitInstalled = MiniKit.isInstalled();
-      } catch (e) {
-        console.error('Failed to check MiniKit installation:', e);
+      // --- 1. Verificación de MiniKit ---
+      if (!MiniKit.isInstalled() || !MiniKit.commandsAsync?.sendTransaction) {
+        throw new Error('MiniKit no está disponible. Por favor, abre esta app en la World App más reciente para realizar la compra.');
       }
 
-      if (!miniKitInstalled) {
-        throw new Error('MiniKit is not installed. Please open this app in World App to make purchases.');
+      // --- 2. Cálculo del costo total en USDC (6 decimales) ---
+      // tokenAmount (18 dec) * pricePerToken (6 dec) = 24 dec. 
+      // Dividir por 10^18 para reducir a 6 dec (que es lo que el contrato USDC espera).
+      const totalCost = (tokenAmount * pricePerToken) / BigInt(10 ** PROPERTY_TOKEN_DECIMALS);
+      
+      if (totalCost <= 0) {
+          throw new Error("El costo total es cero o inválido. Revisa la cantidad de tokens y el precio.");
       }
 
-      // Check if sendTransaction is available
-      if (!MiniKit.commandsAsync?.sendTransaction) {
-        throw new Error('MiniKit sendTransaction is not available. Please update World App to the latest version.');
-      }
-
-      // Calculate total cost in USDC (pricePerToken is in 6 decimals for USDC)
-      const totalCost = (tokenAmount * pricePerToken) / BigInt(10 ** 18); // Convert from 18 decimals to raw amount
-
-      console.log('🚀 Starting token purchase...');
-      console.log('📝 Environment Variables:', {
-        USDC_ADDRESS: process.env.NEXT_PUBLIC_USDC_ADDRESS,
-        SALE_MANAGER: process.env.NEXT_PUBLIC_SALE_MANAGER_ADDRESS,
-        CHAIN_ID: process.env.NEXT_PUBLIC_CHAIN_ID,
-        RPC_URL: process.env.NEXT_PUBLIC_RPC_URL,
-      });
-      console.log('Buying tokens:', {
+      console.log('🚀 Iniciando compra de tokens. Datos de la transacción:', {
         propertyAddress,
         tokenAmount: tokenAmount.toString(),
         pricePerToken: pricePerToken.toString(),
-        totalCost: totalCost.toString(),
+        totalCostInUSDC_6_Decimals: totalCost.toString(),
         totalCostFormatted: Number(totalCost) / Math.pow(10, USDC_DECIMALS),
       });
-      console.log('MiniKit info:', {
-        isInstalled: MiniKit.isInstalled(),
-        hasCommandsAsync: !!MiniKit.commandsAsync,
-        hasSendTransaction: !!MiniKit.commandsAsync?.sendTransaction,
-      });
 
-      // Step 1: Approve USDC spending
-      console.log('Step 1: Approving USDC...');
-      console.log('Approve params:', {
-        usdcAddress: USDC_ADDRESS,
-        spender: CONTRACT_ADDRESSES.SALE_MANAGER,
-        amount: totalCost.toString(),
-      });
-      setIsPending(true);
+      // El flujo de transacción consta de dos partes: Aprobación y Compra.
+      // 
 
+      // --- Paso 1: Aprobar el gasto de USDC al SaleManager ---
+      console.log('--- Paso 1: Aprobando USDC...');
+      
       const { finalPayload: approvePayload } = await MiniKit.commandsAsync.sendTransaction({
         transaction: [
           {
@@ -88,38 +72,31 @@ export function useBuyTokens() {
         ],
       });
 
-      console.log('Approve response:', approvePayload);
+      console.log('Respuesta de Aprobación:', approvePayload);
 
       if (approvePayload.status === 'error') {
-        console.error('Approve error details:', {
-          status: approvePayload.status,
-          error_code: approvePayload.error_code,
-          full_payload: approvePayload,
-        });
-
-        // Handle specific error codes
         if (approvePayload.error_code === 'disallowed_operation') {
+          // El mismo error que el usuario está viendo, con la causa más probable
           throw new Error(
-            'Transaction not allowed. Please ensure:\n' +
-            '1. You are using the latest version of World App\n' +
-            '2. Your app has transaction permissions in Worldcoin Developer Portal\n' +
-            '3. You are on the correct network (World Chain Sepolia)\n' +
-            '4. The USDC contract address is correct for the network'
+            'Transacción no permitida (disallowed_operation). Esto indica que World App ha rechazado la solicitud.\n' +
+            'Las causas son casi siempre externas al código:\n' +
+            '1. La red activa en tu World App NO es World Chain Sepolia (WCS).\n' +
+            '2. Tu App ID en el Portal de Desarrolladores de Worldcoin NO tiene permisos de transacción habilitados para WCS.\n' +
+            '3. El contrato de USDC o el SaleManager que estás usando no está en la lista blanca de contratos permitidos para tu app.'
           );
         }
 
-        throw new Error(`Failed to approve USDC: ${approvePayload.error_code || 'Unknown error'}`);
+        throw new Error(`Fallo al aprobar USDC: ${approvePayload.error_code || 'Error desconocido'}`);
       }
 
       if (approvePayload.status !== 'success') {
-        console.error('Approve not successful:', approvePayload);
-        throw new Error('USDC approval was not successful');
+        throw new Error('La aprobación de USDC no fue exitosa.');
       }
 
-      console.log('USDC approved, transaction:', approvePayload.transaction_id);
+      console.log('USDC aprobado. Hash de la transacción:', approvePayload.transaction_id);
 
-      // Step 2: Buy fractions
-      console.log('Step 2: Buying fractions...');
+      // --- Paso 2: Comprar fracciones ---
+      console.log('--- Paso 2: Comprando fracciones...');
       setIsPending(false);
       setIsConfirming(true);
 
@@ -135,14 +112,14 @@ export function useBuyTokens() {
       });
 
       if (buyPayload.status === 'error') {
-        throw new Error(buyPayload.error_code || 'Failed to buy tokens');
+        throw new Error(buyPayload.error_code || 'Fallo al comprar tokens');
       }
 
       if (buyPayload.status !== 'success') {
-        throw new Error('Token purchase was not successful');
+        throw new Error('La compra de tokens no fue exitosa.');
       }
 
-      console.log('Purchase successful, transaction:', buyPayload.transaction_id);
+      console.log('Compra exitosa. Hash de la transacción:', buyPayload.transaction_id);
 
       setHash(buyPayload.transaction_id || null);
       setIsConfirming(false);
@@ -154,12 +131,15 @@ export function useBuyTokens() {
         hash: buyPayload.transaction_id,
       };
     } catch (err: any) {
-      console.error('Error buying tokens:', err);
-      const errorMessage = err.message || 'Failed to buy tokens';
+      console.error('Error general en la compra de tokens:', err);
+      const errorMessage = err.message || 'Fallo general al comprar tokens';
       setError(errorMessage);
       setIsPending(false);
       setIsConfirming(false);
       return { success: false, error: errorMessage };
+    } finally {
+        setIsPending(false);
+        setIsConfirming(false);
     }
   }, []);
 

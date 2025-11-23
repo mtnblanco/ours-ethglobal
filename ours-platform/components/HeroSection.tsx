@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import TokenCard from './TokenCard';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+// Importamos los tipos necesarios de MiniKit
+import { MiniKit, WalletAuthInput, MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
 
 const HeroSection = () => {
     const fadeIn = {
@@ -12,134 +14,95 @@ const HeroSection = () => {
     };
 
     const router = useRouter();
-    const [isVerifying, setIsVerifying] = useState(false);
-    const [verifyError, setVerifyError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [authError, setAuthError] = useState<string | null>(null);
 
-    async function handleGetStarted() {
-        setIsVerifying(true);
-        setVerifyError(null);
+    // 1. Inicializar MiniKit al montar el componente
+    useEffect(() => {
+        try {
+            MiniKit.install(process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID);
+            console.log("MiniKit installed");
+        } catch (error) {
+            console.error("Error installing MiniKit:", error);
+        }
+    }, []);
+
+    // Función principal de Login (Wallet Authentication)
+    const handleLogin = async () => {
+        setIsLoading(true);
+        setAuthError(null);
+
+        // Verificamos si estamos dentro de World App
+        if (!MiniKit.isInstalled()) {
+            setAuthError("MiniKit no está instalado. Por favor abre esta aplicación desde World App.");
+            setIsLoading(false);
+            return;
+        }
 
         try {
-            // Step 1: World ID verification for human proof
-            const mod: any = await import("@worldcoin/minikit-js");
-            const MiniKit = mod.MiniKit ?? mod.default ?? mod;
+            // PASO A: Obtener un 'nonce' fresco desde tu backend
+            // Esto es crucial para la seguridad (evita ataques de replay)
+            const nonceRes = await fetch(`/api/nonce`);
+            if (!nonceRes.ok) throw new Error("Error fetching nonce from backend");
+            
+            const { nonce } = await nonceRes.json();
 
-            if (!MiniKit) {
-                setVerifyError("MiniKit module unavailable");
-                setIsVerifying(false);
-                return;
-            }
+            // PASO B: Configurar el comando de Wallet Auth (SIWE)
+            const walletAuthInput: WalletAuthInput = {
+                nonce: nonce,
+                requestId: '0', // Opcional
+                expirationTime: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000), // 7 días
+                notBefore: new Date(new Date().getTime() - 24 * 60 * 60 * 1000), // 1 día antes (margen error reloj)
+                statement: 'Sign in to RWA Platform to manage your Real Estate Assets.',
+            };
 
-            // Ensure MiniKit is installed
-            try {
-                if (typeof MiniKit.install === "function") {
-                    const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID;
-                    const installRes = await MiniKit.install(appId);
+            // PASO C: Ejecutar el comando en MiniKit
+            console.log("Solicitando firma de wallet...");
+            const { finalPayload } = await MiniKit.commandsAsync.walletAuth(walletAuthInput);
 
-                    if (installRes && installRes.success === false && installRes.errorCode !== "already_installed") {
-                        setVerifyError(installRes.errorMessage || `MiniKit.install failed: ${installRes.errorCode}`);
-                        setIsVerifying(false);
-                        return;
-                    }
+            // PASO D: Verificar el resultado
+            if (finalPayload.status === 'success') {
+                console.log("✅ Firma exitosa, verificando en backend...");
+
+                // Enviamos la firma y el nonce original al backend para validación final
+                const verifyRes = await fetch('/api/complete-siwe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        payload: finalPayload, // Contiene signature, address, etc.
+                        nonce,
+                    }),
+                });
+
+                const verifyData = await verifyRes.json();
+
+                if (verifyData.status === 'success' && verifyData.isValid) {
+                    console.log("✅ Login completado.");
+                    // Redirigir al usuario
+                    router.push('/marketplace');
+                } else {
+                    setAuthError("La validación de la firma falló en el servidor.");
                 }
-            } catch (ie) {
-                setVerifyError(String(ie));
-                setIsVerifying(false);
-                return;
-            }
-
-            if (!MiniKit.commandsAsync || typeof MiniKit.commandsAsync.verify !== "function") {
-                setVerifyError("'verify' command is unavailable. Check MiniKit.install() or update the World App.");
-                setIsVerifying(false);
-                return;
-            }
-
-            // Execute World ID verification
-            const signal = typeof window !== "undefined" ? window.location.href : "signup";
-            const payload = { action: "signup", signal };
-
-            const resp = await MiniKit.commandsAsync.verify(payload);
-
-            if (resp?.finalPayload?.status === "success") {
-                // World ID verification successful! Redirect to marketplace
-                // For now, we skip KYC and go directly to marketplace
-                //await requestKYCWithWorldID(resp.finalPayload);
-                console.log("World ID verification successful:", resp.finalPayload);
-                setIsVerifying(false);
-                router.push('/marketplace');
             } else {
-                setVerifyError("World ID verification failed or was cancelled");
-                setIsVerifying(false);
+                // El usuario canceló o hubo un error en la app
+                setAuthError("Autenticación cancelada o fallida.");
             }
-        } catch (err) {
-            console.error("Verification error:", err);
-            setVerifyError(String(err));
-            setIsVerifying(false);
-        }
-    }
 
-    // KYC function - commented out for now, going directly to marketplace
-    /*
-    async function requestKYCWithWorldID(worldIdProof: any) {
-      try {
-        // Get user's wallet address if available
-        let userAddress = "0x0000000000000000000000000000000000000000";
-        
-        // Try to get wallet address from Web3 provider
-        if (typeof window !== "undefined" && (window as any).ethereum) {
-          try {
-            const accounts = await (window as any).ethereum.request({ 
-              method: 'eth_requestAccounts' 
-            });
-            if (accounts && accounts.length > 0) {
-              userAddress = accounts[0];
-            }
-          } catch (walletError) {
-            console.warn("Could not connect to wallet:", walletError);
-            // Continue without wallet address - the contract will handle this
-          }
+        } catch (err) {
+            console.error("Error en proceso de login:", err);
+            setAuthError("Ocurrió un error inesperado durante la conexión.");
+        } finally {
+            setIsLoading(false);
         }
-  
-        // Send World ID proof to backend for KYC processing
-        // Following MiniKit documentation format
-        const response = await fetch('http://localhost:8000/api/v1/kyc/worldid', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            payload: worldIdProof, // Send the complete payload from MiniKit
-            action: "signup",
-            signal: typeof window !== "undefined" ? window.location.href : "signup",
-            user_address: userAddress
-          }),
-        });
-  
-        const result = await response.json();
-        
-        if (result.success) {
-          // KYC initiated successfully, redirect to complete profile
-          router.push('/register?kyc_initiated=true&tx_hash=' + (result.transaction_hash || ''));
-        } else {
-          setVerifyError(result.error || "KYC initiation failed");
-          setIsVerifying(false);
-        }
-      } catch (error) {
-        console.error("KYC request error:", error);
-        setVerifyError("Failed to initiate KYC process");
-        setIsVerifying(false);
-      }
-    }
-    */
+    };
 
     return (
-        /* --- HERO SECTION --- */
         <section className="relative bg-[#1E2046] overflow-hidden min-h-[850px] flex flex-col lg:flex-row items-center pt-20 lg:pt-0">
-            {/* 1. COLUMNA IZQUIERDA (Contenido) */}
             <div className="container mx-auto px-6 relative z-20 h-full pointer-events-none">
                 <div className="grid lg:grid-cols-2 h-full items-center">
 
-                    {/* Texto */}
                     <motion.div
                         initial="hidden"
                         animate="visible"
@@ -160,60 +123,42 @@ const HeroSection = () => {
 
                         <Link href="/login" className="hidden sm:block text-sm font-medium text-brand-light hover:text-brand-primary py-2 px-4 transition-colors">Log in</Link>
 
-                        <button className="bg-[#B0C9FF] hover:bg-[#9ab6f0] text-[#1E2046] px-8 py-4 rounded-lg font-semibold flex items-center gap-2 transition-all duration-300"
-                            onClick={handleGetStarted}
-                            disabled={isVerifying}
+                        <button 
+                            className={`bg-[#B0C9FF] hover:bg-[#9ab6f0] text-[#1E2046] px-8 py-4 rounded-lg font-semibold flex items-center gap-2 transition-all duration-300 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                            onClick={handleLogin} // Usamos la nueva función handleLogin
+                            disabled={isLoading}
                         >
-                            {isVerifying ? "Verifying..." : "Start Investing"}
-                            <ArrowRight size={20} />
+                            {isLoading ? "Connecting Wallet..." : "Start Investing"}
+                            {!isLoading && <ArrowRight size={20} />}
                         </button>
-                        {verifyError && (
+                        
+                        {authError && (
                             <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                                <p className="text-red-400 text-sm">{verifyError}</p>
+                                <p className="text-red-400 text-sm">{authError}</p>
                             </div>
                         )}
                     </motion.div>
 
-                    {/* Espacio vacío en la grilla para que el texto no ocupe todo el ancho en desktop */}
                     <div className="hidden lg:block"></div>
                 </div>
             </div>
 
-            {/* 2. COLUMNA DERECHA (Visual) */}
             <motion.div
                 initial={{ x: 100, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ duration: 0.8 }}
-                className={`
-                    relative w-full mt-12                    
-                    lg:absolute lg:mt-0 lg:right-0 lg:top-[25%] lg:bottom-0 lg:left-[45%] 
-                    flex items-center justify-end z-10
-                `}
+                className="relative w-full mt-12 lg:absolute lg:mt-0 lg:right-0 lg:top-[25%] lg:bottom-0 lg:left-[45%] flex items-center justify-end z-10"
             >
-                {/* Wrapper del Asset */}
                 <div className="relative w-full max-w-[800px]">
-
-                    {/* IMAGEN DE FONDO (recurso1.svg) */}
-                    <img
-                        src="recurso1.svg"
-                        alt="Background Asset"
-                        className="w-full h-auto object-contain ml-auto drop-shadow-2xl"
-                    />
-
-                    {/* TOKEN CARD (Superpuesta y centrada) */}
+                    <img src="recurso1.svg" alt="Background Asset" className="w-full h-auto object-contain ml-auto drop-shadow-2xl" />
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <motion.div
-                            className="relative left-[15%]"
-                            whileHover={{ y: -10 }}
-                            transition={{ type: "spring", stiffness: 300 }}
-                        >
+                        <motion.div className="relative left-[15%]" whileHover={{ y: -10 }} transition={{ type: "spring", stiffness: 300 }}>
                             <TokenCard />
                         </motion.div>
                     </div>
                 </div>
             </motion.div>
 
-            {/* CORE FUNCTIONALITY - Texto al final */}
             <div className="absolute bottom-2 left-1 right-0 z-30">
                 <div className="container mx-auto">
                     <motion.h2
