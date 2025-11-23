@@ -84,6 +84,21 @@ export default function PropertyDetailPage() {
 
     const userBalanceNumber = parseFloat(usdcBalance);
 
+    // 🔍 DEBUG: Log balance comparison
+    console.log('💰 Buy Tokens Balance Check:', {
+        tokenPrice,
+        tokenAmount,
+        totalCost,
+        gasFee,
+        protocolFee,
+        grandTotal,
+        usdcBalance,
+        usdcBalanceRaw: usdcBalanceRaw?.toString(),
+        userBalanceNumber,
+        hasEnough: grandTotal <= userBalanceNumber,
+        difference: userBalanceNumber - grandTotal,
+    });
+
     // Handle buy tokens
     const handleBuyTokens = async () => {
         // Check if in MiniKit environment
@@ -101,10 +116,21 @@ export default function PropertyDetailPage() {
             }
         }
 
-        if (grandTotal > userBalanceNumber) {
-            alert('Insufficient USDC balance');
+        // Only check totalCost (USDC needed), not gas fees (paid in native token)
+        if (totalCost > userBalanceNumber) {
+            console.error('❌ Insufficient balance:', {
+                needed: totalCost,
+                available: userBalanceNumber,
+                difference: userBalanceNumber - totalCost,
+            });
+            alert(`Insufficient USDC balance. Need $${totalCost.toFixed(2)} but have $${userBalanceNumber.toFixed(2)}`);
             return;
         }
+
+        console.log('✅ Proceeding with purchase:', {
+            totalCost,
+            userBalanceNumber,
+        });
 
         setIsBuying(true);
 
@@ -375,7 +401,7 @@ export default function PropertyDetailPage() {
 
                                     <button
                                         onClick={handleBuyTokens}
-                                        disabled={!isMiniKit || grandTotal > userBalanceNumber || isBuying || isPending || isConfirming}
+                                        disabled={!isMiniKit || totalCost > userBalanceNumber || isBuying || isPending || isConfirming}
                                         className="w-full py-4 rounded-lg font-bold text-lg transition-all bg-[#2D2E63] text-[#B0CBFF] hover:bg-[#1E2046] hover:scale-[1.02] active:scale-[0.98] disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100"
                                     >
                                         {!isMiniKit
@@ -386,7 +412,7 @@ export default function PropertyDetailPage() {
                                             ? 'Confirming Purchase...'
                                             : isBuying
                                             ? 'Processing...'
-                                            : grandTotal > userBalanceNumber
+                                            : totalCost > userBalanceNumber
                                             ? 'Insufficient Balance'
                                             : 'Invest Now'}
                                     </button>

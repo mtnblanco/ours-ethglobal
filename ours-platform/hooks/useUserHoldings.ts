@@ -23,6 +23,13 @@ export function useUserHoldings(userAddress?: Address | null) {
   const { propertyAddresses, isLoading: isLoadingAddresses } = useAllProperties();
   const { properties: allProperties, isLoading: isLoadingProperties } = usePropertiesWithSales(propertyAddresses);
 
+  console.log('🔍 useUserHoldings DEBUG:', {
+    userAddress,
+    propertyAddressesCount: propertyAddresses?.length,
+    isLoadingAddresses,
+    isLoadingProperties,
+  });
+
   // Create balance check contracts for all property tokens
   const balanceContracts = propertyAddresses?.map((propertyAddress) => ({
     address: propertyAddress as Address,
@@ -33,6 +40,19 @@ export function useUserHoldings(userAddress?: Address | null) {
 
   const { data: balances, isLoading: isLoadingBalances } = useReadContracts({
     contracts: balanceContracts,
+    query: {
+      enabled: !!userAddress && propertyAddresses && propertyAddresses.length > 0,
+    },
+  });
+
+  console.log('🔍 useUserHoldings Balances:', {
+    balancesCount: balances?.length,
+    isLoadingBalances,
+    balances: balances?.map((b, i) => ({
+      index: i,
+      status: b.status,
+      result: b.status === 'success' ? b.result?.toString() : null,
+    })),
   });
 
   // Combine property data with user balances
@@ -76,6 +96,11 @@ export function useUserHoldings(userAddress?: Address | null) {
  * @param userAddress - The user's wallet address (from MiniKit or Wagmi)
  */
 export function useUSDCBalance(userAddress?: Address | null) {
+  console.log('🔍 useUSDCBalance DEBUG:', {
+    userAddress,
+    usdcAddress: process.env.NEXT_PUBLIC_USDC_ADDRESS,
+  });
+
   const { data, isLoading } = useReadContracts({
     contracts: [
       {
@@ -90,6 +115,9 @@ export function useUSDCBalance(userAddress?: Address | null) {
         functionName: 'decimals',
       },
     ],
+    query: {
+      enabled: !!userAddress,
+    },
   });
 
   let balance: bigint = BigInt(0);
@@ -102,6 +130,14 @@ export function useUSDCBalance(userAddress?: Address | null) {
   if (data && data[1]?.status === 'success' && data[1]?.result) {
     decimals = data[1].result as number;
   }
+
+  console.log('🔍 useUSDCBalance Result:', {
+    isLoading,
+    balance: balance.toString(),
+    decimals,
+    formatted: (Number(balance) / Math.pow(10, decimals)).toFixed(2),
+    dataStatus: data?.map(d => d.status),
+  });
 
   return {
     balance,

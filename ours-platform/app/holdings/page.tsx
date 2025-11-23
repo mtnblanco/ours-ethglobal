@@ -21,9 +21,41 @@ export default function HoldingsPage() {
 
   // Get real blockchain data
   const { holdings, isLoading: isLoadingHoldings } = useUserHoldings(userAddress);
-  const { formatted: usdcBalance, isLoading: isLoadingUSDC } = useUSDCBalance(userAddress);
+  const { formatted: usdcBalance, balance: usdcBalanceRaw, decimals, isLoading: isLoadingUSDC } = useUSDCBalance(userAddress);
 
   const isLoading = isAuthLoading || isLoadingHoldings;
+
+  // 🔍 DEBUG: Log all wallet information
+  console.log('========== HOLDINGS PAGE DEBUG ==========');
+  console.log('📍 Auth State:', {
+    userAddress,
+    isConnected,
+    isMiniKit,
+    isAuthLoading,
+  });
+  console.log('💰 USDC Balance:', {
+    raw: usdcBalanceRaw?.toString(),
+    formatted: usdcBalance,
+    decimals,
+    isLoadingUSDC,
+  });
+  console.log('🏠 Holdings:', {
+    count: holdings.length,
+    isLoadingHoldings,
+    holdings: holdings.map(h => ({
+      propertyAddress: h.propertyAddress,
+      propertyName: h.propertyName,
+      tokenBalance: h.tokenBalance.toString(),
+      tokenPrice: h.tokenPrice.toString(),
+    })),
+  });
+  console.log('⏳ Loading States:', {
+    isAuthLoading,
+    isLoadingHoldings,
+    isLoadingUSDC,
+    isLoading,
+  });
+  console.log('========================================');
 
   // Transform blockchain holdings to display format
   const displayHoldings = holdings.map((holding) => {
