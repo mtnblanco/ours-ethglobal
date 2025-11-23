@@ -1,0 +1,16 @@
+{
+  "evmEvents": [
+    {
+      "name": "KYCRequested",
+      "abi": "./abis/ChainlinkKYCIssuer.json",
+      "network": "worldchain-sepolia",
+      "event": "KYCRequested",
+      "inputMappings": {
+        "user": "user",
+        "nullifierHash": "nullifierHash",
+        "timestamp": "timestamp"
+      }
+    }
+  ]
+}
+

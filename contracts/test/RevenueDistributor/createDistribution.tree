@@ -1,0 +1,28 @@
+CreateDistributionTest
+├── when the caller lacks PROPERTY_ISSUER_ROLE
+│   └── it should revert with AccessControlUnauthorizedAccount
+├── when the contract is paused
+│   └── it should revert with EnforcedPause
+└── when the caller has PROPERTY_ISSUER_ROLE and contract is not paused
+    ├── when the token address is zero
+    │   └── it should revert with InvalidToken
+    ├── when the merkle root is empty
+    │   └── it should revert with InvalidMerkleRoot
+    ├── when the amount is zero
+    │   └── it should revert with InvalidAmount
+    ├── when a distribution already exists for this token
+    │   └── it should revert with DistributionAlreadyExists
+    ├── when the property is not registered
+    │   └── it should revert with PropertyNotRegistered
+    ├── when the caller is not the property issuer
+    │   └── it should revert with NotPropertyIssuer
+    ├── when stablecoin transfer fails
+    │   └── it should revert with transfer error
+    └── when all parameters are valid
+        ├── it should create the distribution with correct data
+        ├── it should transfer stablecoin from issuer to contract
+        ├── it should calculate and store platform fee
+        ├── it should mark distribution as active
+        ├── it should set claim deadline
+        └── it should emit DistributionCreated event
+
