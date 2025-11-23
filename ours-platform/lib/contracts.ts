@@ -8,137 +8,240 @@ export const CONTRACT_ADDRESSES = {
   KYC_ISSUER: process.env.NEXT_PUBLIC_CHAINLINK_KYC_ISSUER_ADDRESS || '0x1d7e95F200508Bf1f29d2386FBDCfa65a88c00EE',
 };
 
-// PropertyRegistry ABI (minimal for marketplace use)
+// PropertyRegistry ABI (from compiled contract)
 export const PROPERTY_REGISTRY_ABI = [
-  // View functions
-  "function getProperty(address token) external view returns (tuple(address token, address issuer, string name, string location, uint256 totalArea, uint256 units, uint256 constructionStart, uint256 estimatedCompletion, uint256 actualCompletion, uint8 status, string ipfsHash, string cadastralNumber, address legalOwner, uint256 registeredAt, bool isActive, uint256 totalTokenSupply, uint256 totalInvestmentTarget, uint256 estimatedSalePrice) property)",
-  "function getAllProperties() external view returns (address[] memory)",
-  "function properties(address token) external view returns (address token, address issuer, string memory name, string memory location, uint256 totalArea, uint256 units, uint256 constructionStart, uint256 estimatedCompletion, uint256 actualCompletion, uint8 status, string memory ipfsHash, string memory cadastralNumber, address legalOwner, uint256 registeredAt, bool isActive, uint256 totalTokenSupply, uint256 totalInvestmentTarget, uint256 estimatedSalePrice)",
-  "function getIssuerProperties(address issuer) external view returns (address[] memory)",
-  "function isPropertyAvailable(address token) external view returns (bool)",
-  "function getConstructionProgress(address token) external view returns (uint256)",
-  "function getInvestmentProjection(address token, uint256 tokenAmount, uint256 pricePerToken) external view returns (uint256 investmentCost, uint256 ownershipPercentageBps, uint256 estimatedReturn, uint256 estimatedROIBps)",
-  "function getFinancialInfo(address token) external view returns (uint256 totalTokenSupply, uint256 totalInvestmentTarget, uint256 estimatedSalePrice, uint256 pricePerTokenTarget, uint256 expectedProfitMarginBps)",
-  "function getMaximumROI(address token) external view returns (uint256 maxROIBps)",
-  "function propertyExists(address token) external view returns (bool)",
-  "function propertyCount() external view returns (uint256)"
-];
-
-// SaleManager ABI (minimal for marketplace use)
-export const SALE_MANAGER_ABI = [
-  // View functions
   {
-    "inputs": [{"name": "token", "type": "address"}],
-    "name": "getSale",
+    "inputs": [],
+    "name": "getAllProperties",
+    "outputs": [{"internalType": "address[]", "name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "token", "type": "address"}],
+    "name": "getProperty",
     "outputs": [{
-      "name": "sale",
-      "type": "tuple",
       "components": [
-        {"name": "token", "type": "address"},
-        {"name": "issuer", "type": "address"},
-        {"name": "pricePerToken", "type": "uint256"},
-        {"name": "isActive", "type": "bool"},
-        {"name": "totalRaised", "type": "uint256"},
-        {"name": "withdrawableBalance", "type": "uint256"}
-      ]
+        {"internalType": "address", "name": "token", "type": "address"},
+        {"internalType": "address", "name": "issuer", "type": "address"},
+        {"internalType": "string", "name": "name", "type": "string"},
+        {"internalType": "string", "name": "location", "type": "string"},
+        {"internalType": "uint256", "name": "totalArea", "type": "uint256"},
+        {"internalType": "uint256", "name": "units", "type": "uint256"},
+        {"internalType": "uint256", "name": "constructionStart", "type": "uint256"},
+        {"internalType": "uint256", "name": "estimatedCompletion", "type": "uint256"},
+        {"internalType": "uint256", "name": "actualCompletion", "type": "uint256"},
+        {"internalType": "uint8", "name": "status", "type": "uint8"},
+        {"internalType": "string", "name": "ipfsHash", "type": "string"},
+        {"internalType": "string", "name": "cadastralNumber", "type": "string"},
+        {"internalType": "address", "name": "legalOwner", "type": "address"},
+        {"internalType": "uint256", "name": "registeredAt", "type": "uint256"},
+        {"internalType": "bool", "name": "isActive", "type": "bool"},
+        {"internalType": "uint256", "name": "totalTokenSupply", "type": "uint256"},
+        {"internalType": "uint256", "name": "totalInvestmentTarget", "type": "uint256"},
+        {"internalType": "uint256", "name": "estimatedSalePrice", "type": "uint256"}
+      ],
+      "internalType": "struct PropertyRegistry.Property",
+      "name": "",
+      "type": "tuple"
     }],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "getActiveSales",
-    "outputs": [{"name": "", "type": "address[]"}],
+    "inputs": [{"internalType": "address", "name": "", "type": "address"}],
+    "name": "properties",
+    "outputs": [
+      {"internalType": "address", "name": "token", "type": "address"},
+      {"internalType": "address", "name": "issuer", "type": "address"},
+      {"internalType": "string", "name": "name", "type": "string"},
+      {"internalType": "string", "name": "location", "type": "string"},
+      {"internalType": "uint256", "name": "totalArea", "type": "uint256"},
+      {"internalType": "uint256", "name": "units", "type": "uint256"},
+      {"internalType": "uint256", "name": "constructionStart", "type": "uint256"},
+      {"internalType": "uint256", "name": "estimatedCompletion", "type": "uint256"},
+      {"internalType": "uint256", "name": "actualCompletion", "type": "uint256"},
+      {"internalType": "uint8", "name": "status", "type": "uint8"},
+      {"internalType": "string", "name": "ipfsHash", "type": "string"},
+      {"internalType": "string", "name": "cadastralNumber", "type": "string"},
+      {"internalType": "address", "name": "legalOwner", "type": "address"},
+      {"internalType": "uint256", "name": "registeredAt", "type": "uint256"},
+      {"internalType": "bool", "name": "isActive", "type": "bool"},
+      {"internalType": "uint256", "name": "totalTokenSupply", "type": "uint256"},
+      {"internalType": "uint256", "name": "totalInvestmentTarget", "type": "uint256"},
+      {"internalType": "uint256", "name": "estimatedSalePrice", "type": "uint256"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "issuer", "type": "address"}],
+    "name": "getIssuerProperties",
+    "outputs": [{"internalType": "address[]", "name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "token", "type": "address"}],
+    "name": "isPropertyAvailable",
+    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "token", "type": "address"}],
+    "name": "getConstructionProgress",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "token", "type": "address"},
+      {"internalType": "uint256", "name": "tokenAmount", "type": "uint256"},
+      {"internalType": "uint256", "name": "pricePerToken", "type": "uint256"}
+    ],
+    "name": "getInvestmentProjection",
+    "outputs": [
+      {"internalType": "uint256", "name": "investmentCost", "type": "uint256"},
+      {"internalType": "uint256", "name": "ownershipPercentageBps", "type": "uint256"},
+      {"internalType": "uint256", "name": "estimatedReturn", "type": "uint256"},
+      {"internalType": "uint256", "name": "estimatedROIBps", "type": "uint256"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "token", "type": "address"}],
+    "name": "getFinancialInfo",
+    "outputs": [
+      {"internalType": "uint256", "name": "totalTokenSupply", "type": "uint256"},
+      {"internalType": "uint256", "name": "totalInvestmentTarget", "type": "uint256"},
+      {"internalType": "uint256", "name": "estimatedSalePrice", "type": "uint256"},
+      {"internalType": "uint256", "name": "pricePerTokenTarget", "type": "uint256"},
+      {"internalType": "uint256", "name": "expectedProfitMarginBps", "type": "uint256"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "token", "type": "address"}],
+    "name": "getMaximumROI",
+    "outputs": [{"internalType": "uint256", "name": "maxROIBps", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "", "type": "address"}],
+    "name": "propertyExists",
+    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "getAllSales",
-    "outputs": [{"name": "", "type": "address[]"}],
+    "name": "propertyCount",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
-  },
+  }
+] as const;
+
+// SaleManager ABI (from compiled contract)
+export const SALE_MANAGER_ABI = [
   {
-    "inputs": [{"name": "token", "type": "address"}],
+    "inputs": [{"internalType": "address", "name": "token", "type": "address"}],
     "name": "getPropertyAndSaleInfo",
     "outputs": [
       {
-        "name": "property",
-        "type": "tuple",
         "components": [
-          {"name": "token", "type": "address"},
-          {"name": "issuer", "type": "address"},
-          {"name": "name", "type": "string"},
-          {"name": "location", "type": "string"},
-          {"name": "totalArea", "type": "uint256"},
-          {"name": "units", "type": "uint256"},
-          {"name": "constructionStart", "type": "uint256"},
-          {"name": "estimatedCompletion", "type": "uint256"},
-          {"name": "actualCompletion", "type": "uint256"},
-          {"name": "status", "type": "uint8"},
-          {"name": "ipfsHash", "type": "string"},
-          {"name": "cadastralNumber", "type": "string"},
-          {"name": "legalOwner", "type": "address"},
-          {"name": "registeredAt", "type": "uint256"},
-          {"name": "isActive", "type": "bool"},
-          {"name": "totalTokenSupply", "type": "uint256"},
-          {"name": "totalInvestmentTarget", "type": "uint256"},
-          {"name": "estimatedSalePrice", "type": "uint256"}
-        ]
+          {"internalType": "address", "name": "token", "type": "address"},
+          {"internalType": "address", "name": "issuer", "type": "address"},
+          {"internalType": "string", "name": "name", "type": "string"},
+          {"internalType": "string", "name": "location", "type": "string"},
+          {"internalType": "uint256", "name": "totalArea", "type": "uint256"},
+          {"internalType": "uint256", "name": "units", "type": "uint256"},
+          {"internalType": "uint256", "name": "constructionStart", "type": "uint256"},
+          {"internalType": "uint256", "name": "estimatedCompletion", "type": "uint256"},
+          {"internalType": "uint256", "name": "actualCompletion", "type": "uint256"},
+          {"internalType": "uint8", "name": "status", "type": "uint8"},
+          {"internalType": "string", "name": "ipfsHash", "type": "string"},
+          {"internalType": "string", "name": "cadastralNumber", "type": "string"},
+          {"internalType": "address", "name": "legalOwner", "type": "address"},
+          {"internalType": "uint256", "name": "registeredAt", "type": "uint256"},
+          {"internalType": "bool", "name": "isActive", "type": "bool"},
+          {"internalType": "uint256", "name": "totalTokenSupply", "type": "uint256"},
+          {"internalType": "uint256", "name": "totalInvestmentTarget", "type": "uint256"},
+          {"internalType": "uint256", "name": "estimatedSalePrice", "type": "uint256"}
+        ],
+        "internalType": "struct PropertyRegistry.Property",
+        "name": "property",
+        "type": "tuple"
       },
       {
-        "name": "sale",
-        "type": "tuple",
         "components": [
-          {"name": "token", "type": "address"},
-          {"name": "issuer", "type": "address"},
-          {"name": "pricePerToken", "type": "uint256"},
-          {"name": "isActive", "type": "bool"},
-          {"name": "totalRaised", "type": "uint256"},
-          {"name": "withdrawableBalance", "type": "uint256"}
-        ]
+          {"internalType": "address", "name": "token", "type": "address"},
+          {"internalType": "address", "name": "issuer", "type": "address"},
+          {"internalType": "uint256", "name": "pricePerToken", "type": "uint256"},
+          {"internalType": "bool", "name": "isActive", "type": "bool"},
+          {"internalType": "uint256", "name": "totalRaised", "type": "uint256"},
+          {"internalType": "uint256", "name": "withdrawableBalance", "type": "uint256"}
+        ],
+        "internalType": "struct SaleManager.Sale",
+        "name": "sale",
+        "type": "tuple"
       },
-      {"name": "saleIsActive", "type": "bool"}
+      {"internalType": "bool", "name": "saleIsActive", "type": "bool"}
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
-      {"name": "token", "type": "address"},
-      {"name": "amount", "type": "uint256"}
-    ],
-    "name": "calculateCost",
+    "inputs": [{"internalType": "address", "name": "token", "type": "address"}],
+    "name": "getSale",
+    "outputs": [{
+      "components": [
+        {"internalType": "address", "name": "token", "type": "address"},
+        {"internalType": "address", "name": "issuer", "type": "address"},
+        {"internalType": "uint256", "name": "pricePerToken", "type": "uint256"},
+        {"internalType": "bool", "name": "isActive", "type": "bool"},
+        {"internalType": "uint256", "name": "totalRaised", "type": "uint256"},
+        {"internalType": "uint256", "name": "withdrawableBalance", "type": "uint256"}
+      ],
+      "internalType": "struct SaleManager.Sale",
+      "name": "",
+      "type": "tuple"
+    }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "", "type": "address"}],
+    "name": "sales",
     "outputs": [
-      {"name": "totalCost", "type": "uint256"},
-      {"name": "platformFee", "type": "uint256"},
-      {"name": "issuerAmount", "type": "uint256"}
+      {"internalType": "address", "name": "token", "type": "address"},
+      {"internalType": "address", "name": "issuer", "type": "address"},
+      {"internalType": "uint256", "name": "pricePerToken", "type": "uint256"},
+      {"internalType": "bool", "name": "isActive", "type": "bool"},
+      {"internalType": "uint256", "name": "totalRaised", "type": "uint256"},
+      {"internalType": "uint256", "name": "withdrawableBalance", "type": "uint256"}
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
-      {"name": "token", "type": "address"},
-      {"name": "amount", "type": "uint256"}
-    ],
-    "name": "buyFractions",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "inputs": [],
+    "name": "propertyRegistry",
+    "outputs": [{"internalType": "contract PropertyRegistry", "name": "", "type": "address"}],
+    "stateMutability": "view",
     "type": "function"
   },
   {
-    "anonymous": false,
-    "inputs": [
-      {"indexed": true, "name": "buyer", "type": "address"},
-      {"indexed": true, "name": "token", "type": "address"},
-      {"indexed": false, "name": "amount", "type": "uint256"},
-      {"indexed": false, "name": "totalCost", "type": "uint256"},
-      {"indexed": false, "name": "platformFee", "type": "uint256"}
-    ],
-    "name": "TokensPurchased",
-    "type": "event"
+    "inputs": [],
+    "name": "kycIssuer",
+    "outputs": [{"internalType": "contract ChainlinkKYCIssuer", "name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
   }
 ] as const;
 
