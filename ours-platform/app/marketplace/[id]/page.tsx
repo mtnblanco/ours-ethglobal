@@ -76,27 +76,44 @@ export default function PropertyDetailPage() {
     const property = propertyWithSale.property;
     const sale = propertyWithSale.sale;
 
+    // 🔍 DEBUG: Log raw sale data
+    console.log('🔍 Raw Sale Data:', {
+        pricePerTokenRaw: sale.pricePerToken?.toString(),
+        pricePerTokenType: typeof sale.pricePerToken,
+    });
+
     const tokenPrice = sale.pricePerToken ? parseFloat(formatTokenAmount(sale.pricePerToken, 6)) : 0;
     const totalCost = tokenAmount * tokenPrice;
+
+    // Calculate what the ACTUAL cost will be in the smart contract
+    const pricePerTokenBigInt = sale.pricePerToken || BigInt(0);
+    const tokenAmountBigInt = BigInt(tokenAmount);
+    const actualTotalCostRaw = (tokenAmountBigInt * pricePerTokenBigInt) / BigInt(10 ** 18);
+    const actualTotalCostFormatted = Number(actualTotalCostRaw) / Math.pow(10, 6);
+
     const gasFee = 2.50;
     const protocolFee = totalCost * 0.005;
     const grandTotal = totalCost + gasFee + protocolFee;
 
     const userBalanceNumber = parseFloat(usdcBalance);
+    const userBalanceRawNumber = Number(usdcBalanceRaw) / Math.pow(10, 6);
 
     // 🔍 DEBUG: Log balance comparison
     console.log('💰 Buy Tokens Balance Check:', {
         tokenPrice,
         tokenAmount,
         totalCost,
+        actualTotalCostRaw: actualTotalCostRaw.toString(),
+        actualTotalCostFormatted,
         gasFee,
         protocolFee,
         grandTotal,
         usdcBalance,
         usdcBalanceRaw: usdcBalanceRaw?.toString(),
         userBalanceNumber,
-        hasEnough: grandTotal <= userBalanceNumber,
-        difference: userBalanceNumber - grandTotal,
+        userBalanceRawNumber,
+        hasEnough: actualTotalCostFormatted <= userBalanceRawNumber,
+        difference: userBalanceRawNumber - actualTotalCostFormatted,
     });
 
     // Handle buy tokens
@@ -116,20 +133,28 @@ export default function PropertyDetailPage() {
             }
         }
 
-        // Only check totalCost (USDC needed), not gas fees (paid in native token)
-        if (totalCost > userBalanceNumber) {
+        // Calculate the actual USDC cost (matching smart contract calculation)
+        const actualCostInUSDC = actualTotalCostFormatted;
+        const userUSDCBalance = userBalanceRawNumber;
+
+        // Only check actualCost (USDC needed), not gas fees (paid in native token)
+        if (actualCostInUSDC > userUSDCBalance) {
             console.error('❌ Insufficient balance:', {
-                needed: totalCost,
-                available: userBalanceNumber,
-                difference: userBalanceNumber - totalCost,
+                needed: actualCostInUSDC,
+                available: userUSDCBalance,
+                difference: userUSDCBalance - actualCostInUSDC,
+                rawNeeded: actualTotalCostRaw.toString(),
+                rawAvailable: usdcBalanceRaw?.toString(),
             });
-            alert(`Insufficient USDC balance. Need $${totalCost.toFixed(2)} but have $${userBalanceNumber.toFixed(2)}`);
+            alert(`Insufficient USDC balance. Need $${actualCostInUSDC.toFixed(2)} but have $${userUSDCBalance.toFixed(2)}`);
             return;
         }
 
         console.log('✅ Proceeding with purchase:', {
-            totalCost,
-            userBalanceNumber,
+            actualCostInUSDC,
+            userUSDCBalance,
+            rawCost: actualTotalCostRaw.toString(),
+            rawBalance: usdcBalanceRaw?.toString(),
         });
 
         setIsBuying(true);
@@ -401,7 +426,7 @@ export default function PropertyDetailPage() {
 
                                     <button
                                         onClick={handleBuyTokens}
-                                        disabled={!isMiniKit || totalCost > userBalanceNumber || isBuying || isPending || isConfirming}
+                                        disabled={!isMiniKit || actualTotalCostFormatted > userBalanceRawNumber || isBuying || isPending || isConfirming}
                                         className="w-full py-4 rounded-lg font-bold text-lg transition-all bg-[#2D2E63] text-[#B0CBFF] hover:bg-[#1E2046] hover:scale-[1.02] active:scale-[0.98] disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100"
                                     >
                                         {!isMiniKit
@@ -412,7 +437,7 @@ export default function PropertyDetailPage() {
                                             ? 'Confirming Purchase...'
                                             : isBuying
                                             ? 'Processing...'
-                                            : totalCost > userBalanceNumber
+                                            : actualTotalCostFormatted > userBalanceRawNumber
                                             ? 'Insufficient Balance'
                                             : 'Invest Now'}
                                     </button>
