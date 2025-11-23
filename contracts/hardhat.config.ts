@@ -39,15 +39,18 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      type: "edr-simulated",
       chainId: 1337,
     },
     worldchain: {
+      type: "http",
       url: process.env.WORLD_CHAIN_RPC_URL || "https://worldchain-mainnet.g.alchemy.com/v2/demo",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 480, // World Chain mainnet ID
       gasPrice: 1000000000, // 1 gwei (reducido 20x)
     },
     worldchainSepolia: {
+      type: "http",
       url: process.env.WORLD_CHAIN_SEPOLIA_RPC_URL || "https://worldchain-sepolia.g.alchemy.com/v2/demo",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 4801, // World Chain Sepolia testnet ID

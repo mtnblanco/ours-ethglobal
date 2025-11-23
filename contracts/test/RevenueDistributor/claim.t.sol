@@ -69,7 +69,7 @@ contract ClaimTest is BaseTest {
     
     /// @dev when the distribution does not exist
     function test_RevertWhen_TheDistributionDoesNotExist() external {
-        address nonExistentToken = address(new MockERC3643Token("Fake", "FAKE"));
+        address nonExistentToken = address(new MockERC3643Token("FAKE", "FAKE"));
         
         vm.startPrank(investor1);
         vm.expectRevert(RevenueDistributor.DistributionDoesNotExist.selector);
