@@ -1,14 +1,14 @@
 # CRE PROJECT SETTINGS FILE
 staging-settings:
   account:
-    workflow-owner-address: "0xAbdFF83ac5E8E729C6ce44E938f244fB12F6Ce32"
+    workflow-owner-address: "0xbd73D31277d69d2b80556068dbfcf9c3b5B2fd0b"
   rpcs:
     - chain-name: ethereum-testnet-sepolia
       url: https://ethereum-sepolia-rpc.publicnode.com
 
 production-settings:
   account:
-    workflow-owner-address: "0xAbdFF83ac5E8E729C6ce44E938f244fB12F6Ce32"
+    workflow-owner-address: "0xbd73D31277d69d2b80556068dbfcf9c3b5B2fd0b"
   rpcs:
     - chain-name: ethereum-testnet-sepolia
       url: https://ethereum-sepolia-rpc.publicnode.com

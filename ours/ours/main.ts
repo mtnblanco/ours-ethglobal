@@ -1,5 +1,5 @@
-import { cre, Runner, type Runtime, ConsensusAggregationByFields, identical, ok, json, type HTTPSendRequester } from "@chainlink/cre-sdk";
-import { keccak256, toUtf8Bytes } from "ethers";
+import { cre, Runner, type Runtime, ConsensusAggregationByFields, identical, ok, json, type HTTPSendRequester, getNetwork, type EVMLog, bytesToHex, prepareReportRequest, hexToBase64 } from "@chainlink/cre-sdk";
+import { keccak256, toHex, encodeFunctionData } from "viem";
 import contractAbiJson from "./abis/ChainlinkKYCIssuer.json";
 
 //
@@ -53,14 +53,18 @@ const fetchKYCVerification = (
     headers["Authorization"] = `Bearer ${authToken}`;
   }
 
+  // El body debe estar en base64 para Chainlink CRE
+  const bodyJson = JSON.stringify({
+    email: `${userAddress.slice(0, 8)}@user.com`,
+    user_address: userAddress,
+  });
+  const bodyBase64 = Buffer.from(bodyJson).toString('base64');
+
   const response = sendRequester.sendRequest({
     url: apiUrl,
     method: "POST",
     headers,
-    body: JSON.stringify({
-      email: `${userAddress.slice(0, 8)}@user.com`,
-      user_address: userAddress,
-    }),
+    body: bodyBase64,
   }).result();
 
   if (!ok(response)) {
@@ -133,7 +137,7 @@ function hashKYCResult(apiResponse: SimplifiedKYCResponse): string {
     timestamp: Math.floor(Date.now() / 1000),
   };
   const jsonStr = JSON.stringify(dataToHash);
-  const hashBytes = keccak256(toUtf8Bytes(jsonStr));
+  const hashBytes = keccak256(toHex(jsonStr));
   return hashBytes;
 }
 
@@ -143,17 +147,34 @@ function hashKYCResult(apiResponse: SimplifiedKYCResponse): string {
 // -------------------------
 const onKYCRequested = async (
   runtime: Runtime<Config>,
-  log: any
+  log: EVMLog
 ) => {
-  // Extraer datos del evento
-  const user = log.args[0] as string;
-  const nullifierHash = log.args[1];
-  const timestamp = log.args[2];
-
+  // Extraer topics del evento
+  const topics = log.topics;
+  
+  // Validar que hay suficientes topics
+  // KYCRequested(address indexed user, bytes32 indexed nullifierHash, uint256 timestamp)
+  // Topic 0: Event signature
+  // Topic 1: indexed user (address)
+  // Topic 2: indexed nullifierHash (bytes32)
+  if (topics.length < 3) {
+    runtime.log(`ERROR: Log missing required topics for KYCRequested event. Found ${topics.length} topics.`);
+    throw new Error("Insufficient topics");
+  }
+  
+  // Decodificar argumentos indexed
+  // Para address, hacer slice de los últimos 20 bytes del topic de 32 bytes
+  const user = bytesToHex(topics[1].slice(12)); // Address está en los últimos 20 bytes
+  const nullifierHash = bytesToHex(topics[2]); // bytes32 está completo en el topic
+  
+  // El timestamp (uint256) está en log.data (no indexed)
+  // Por simplicidad, usamos el timestamp actual ya que no es crítico para el flujo
+  const timestamp = BigInt(Math.floor(Date.now() / 1000));
+  
   runtime.log(`\n--- Nueva solicitud KYC para ${user} ---`);
   runtime.log(`NullifierHash: ${nullifierHash}`);
   runtime.log(`Timestamp: ${timestamp}`);
-
+  
   try {
     // 1. Verificar KYC con tu API (o mock)
     const kycResult = await verifyKYCWithAPI(runtime, user);
@@ -162,39 +183,72 @@ const onKYCRequested = async (
     const approved = kycResult.isverified;
     runtime.log(`KYC ${approved ? "APROBADO" : "RECHAZADO"} para ${user}`);
 
-  // 3. Hashear resultado
+    // 3. Hashear resultado
     const hash = hashKYCResult(kycResult);
-  runtime.log(`Hash del KYC: ${hash}`);
+    runtime.log(`Hash del KYC: ${hash}`);
 
-  // 4. Enviar fulfillKYC() a tu contrato
+    // 4. Enviar fulfillKYC() a tu contrato
     const config = runtime.config;
-  const contractAbi = contractAbiJson.abi;
+    const contractAbi = contractAbiJson.abi;
 
-    const worldchainSelector = 16015286601757825753n;  // Sepolia para testing
-  const evm = new cre.capabilities.EVMClient(worldchainSelector);
+    // Obtener network para el EVMClient
+    const network = getNetwork({
+      chainFamily: "evm",
+      chainSelectorName: "ethereum-testnet-sepolia",
+      isTestnet: true,
+    });
+
+    if (!network) {
+      throw new Error("Network not found: ethereum-testnet-sepolia");
+    }
+
+    const evmClient = new cre.capabilities.EVMClient(network.chainSelector.selector);
 
     runtime.log(`Llamando fulfillKYC en contrato ${config.kycIssuerAddress}`);
     runtime.log(`Parámetros: user=${user}, approved=${approved}, hash=${hash}`);
 
-    // Enviar transacción al contrato
-    const callParams: any = {
-      address: config.kycIssuerAddress,
+    // Paso 1: Codificar los datos de la función fulfillKYC
+    runtime.log(`📝 Paso 1: Codificando datos de la función fulfillKYC...`);
+    const callData = encodeFunctionData({
       abi: contractAbi,
-      function: "fulfillKYC",
+      functionName: "fulfillKYC",
       args: [user, approved, hash],
-    };
+    });
 
-    const tx = await evm.callContract(runtime as any, callParams).result();
+    // Paso 2: Generar un reporte firmado usando runtime.report()
+    // prepareReportRequest() configura automáticamente encoderName, signingAlgo, hashingAlgo
+    runtime.log(`📝 Paso 2: Generando reporte firmado...`);
+    const reportResponse = runtime.report(prepareReportRequest(callData)).result();
 
-    runtime.log(`Tx enviada → ${JSON.stringify(tx)}`);
-  runtime.log(`KYC completado para ${user}`);
+    // Paso 3: Enviar el reporte a la blockchain usando evmClient.writeReport()
+    // writeReport() usa automáticamente CRE_ETH_PRIVATE_KEY del .env para firmar
+    runtime.log(`📝 Paso 3: Enviando reporte a la blockchain...`);
+    runtime.log(`📝 El workflow usará automáticamente CRE_ETH_PRIVATE_KEY del .env`);
+    
+    const writeResult = await evmClient.writeReport(runtime, {
+      receiver: config.kycIssuerAddress, // Dirección del contrato destino
+      report: reportResponse, // Reporte firmado generado en el paso 2
+      gasConfig: {
+        gasLimit: "500000", // Límite de gas para la transacción
+      },
+    }).result();
+
+    // Log del resultado
+    const txHash = writeResult.txHash ? bytesToHex(writeResult.txHash) : "N/A";
+    runtime.log(`✅ Transacción enviada → Hash: ${txHash}`);
+    
+    if (txHash !== "N/A") {
+      runtime.log(`🔗 Ver transacción en Etherscan: https://sepolia.etherscan.io/tx/${txHash}`);
+    }
+    
+    runtime.log(`🎉 KYC completado para ${user}`);
 
   return {
     user,
     approved,
     hash,
-      tx,
-      kycData: kycResult,
+    txHash,
+    kycData: kycResult,
   };
   } catch (error) {
     runtime.log(`ERROR en KYC para ${user}: ${error}`);
@@ -207,17 +261,34 @@ const onKYCRequested = async (
 // TRIGGER + RUNNER
 // -------------------------
 const initWorkflow = async (config: Config) => {
-  const worldchainSelector = 16015286601757825753n;  // Sepolia para testing
-  const evm = new cre.capabilities.EVMClient(worldchainSelector);
-  const contractAbi = contractAbiJson.abi;
+  // Obtener network usando getNetwork
+  const network = getNetwork({
+    chainFamily: "evm",
+    chainSelectorName: "ethereum-testnet-sepolia", // Sepolia para testing
+    isTestnet: true,
+  });
 
-  const triggerConfig: any = {
-    addresses: [config.kycIssuerAddress],
-  };
+  if (!network) {
+    throw new Error(`Network not found: ethereum-testnet-sepolia`);
+  }
+
+  // Crear EVMClient con el chainSelector
+  const evmClient = new cre.capabilities.EVMClient(network.chainSelector.selector);
+
+  // Calcular el hash del event signature
+  // KYCRequested(address indexed user, bytes32 indexed nullifierHash, uint256 timestamp)
+  const kycRequestedEventHash = keccak256(toHex("KYCRequested(address,bytes32,uint256)"));
 
   return [
     cre.handler(
-      evm.logTrigger(triggerConfig),
+      evmClient.logTrigger({
+        addresses: [config.kycIssuerAddress],
+        topics: [
+          { values: [kycRequestedEventHash] }, // Topic 0: Event signature
+          { values: [] }, // Topic 1: Wildcard para user address (indexed)
+          { values: [] }, // Topic 2: Wildcard para nullifierHash (indexed)
+        ],
+      }),
       onKYCRequested
     ),
   ];

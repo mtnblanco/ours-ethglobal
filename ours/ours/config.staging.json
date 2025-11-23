@@ -1,5 +1,5 @@
 {
-  "kycIssuerAddress": "0x1d7e95F200508Bf1f29d2386FBDCfa65a88c00EE",
+  "kycIssuerAddress": "0xBcB124082A8B25040Db883d7C1A7986099d609F6",
   "kycApiUrl": "https://fastapi-kyc.onrender.com/verify",
   "useMock": false
 }
