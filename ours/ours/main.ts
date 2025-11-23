@@ -1,4 +1,4 @@
-import { cre, Runner, type Runtime } from "@chainlink/cre-sdk";
+import { cre, Runner, type Runtime, ConsensusAggregationByFields, identical, ok, json, type HTTPSendRequester } from "@chainlink/cre-sdk";
 import { keccak256, toUtf8Bytes } from "ethers";
 import contractAbiJson from "./abis/ChainlinkKYCIssuer.json";
 
@@ -8,103 +8,133 @@ import contractAbiJson from "./abis/ChainlinkKYCIssuer.json";
 // -------------------------
 type Config = {
   kycIssuerAddress: string;          // Contrato en Worldchain
-  applicantIdLookupUrl?: string;     // Backend opcional
-  lookupApiToken?: string;           // Token para el backend
+  kycApiUrl: string;                 // URL de tu API de KYC
+  kycApiToken?: string;              // Token para autenticación (opcional)
+  useMock?: boolean;                 // Para testing sin API
   mockOnfidoApproved?: boolean;      // Mock para demo
 };
 
 interface KYCRequestedEvent {
   user: string;
   nullifierHash: string;
-  timestamp: string;
+  timestamp: bigint;
 }
 
-interface ApplicantIdResponse {
-  applicantId: string;
-}
-
-interface OnfidoCheckResponse {
-  id: string;
-  status: string;
-  result: string; // clear o consider
-  [key: string]: unknown;
+interface KYCApiResponse {
+  isverified: boolean;
+  user: {
+    id: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+    dob: string | null;
+    address: string | null;
+    user_address: string | null;
+  };
 }
 
 //
 // -------------------------
 // HELPERS
 // -------------------------
-async function fetchApplicantId(
-  runtime: Runtime<Config>,
-  user: string
-): Promise<string> {
-  const config = runtime.getConfig();
 
-  // Sin backend → mock
-  if (!config.applicantIdLookupUrl || !config.lookupApiToken) {
-    const mockId = `mock-${user.slice(0, 8)}-${Date.now()}`;
-    runtime.log(`[MOCK] Applicant ID generado: ${mockId}`);
-    return mockId;
-  }
-
-  runtime.log(`Buscando applicantId en backend para usuario: ${user}`);
-
-  const http = new cre.capabilities.HTTPClient();
-  const request = {
-    url: `${config.applicantIdLookupUrl}/${user}`,
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${config.lookupApiToken}`,
-      "Content-Type": "application/json",
-    },
+// Función de fetch que será usada por el HTTPClient
+const fetchKYCVerification = (
+  sendRequester: HTTPSendRequester,
+  apiUrl: string,
+  userAddress: string,
+  authToken?: string
+) => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
   };
 
-  const response = await http.sendRequest(runtime, request).result();
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
 
-  if (response.statusCode !== 200) {
+  const response = sendRequester.sendRequest({
+    url: apiUrl,
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      email: `${userAddress.slice(0, 8)}@user.com`,
+      user_address: userAddress,
+    }),
+  }).result();
+
+  if (!ok(response)) {
     throw new Error(
-      `Backend devolvió ${response.statusCode}: ${response.body}`
+      `API devolvió ${response.statusCode}: ${response.body}`
     );
   }
 
-  const parsed: ApplicantIdResponse = JSON.parse(response.body);
-  if (!parsed.applicantId) {
-    throw new Error(`El backend no devolvió applicantId para ${user}`);
+  // Usar json() para parsear como en la documentación
+  const data = json(response) as { isverified: boolean; user: any };
+  
+  return {
+    isverified: data.isverified,
+    email: data.user?.email || "",
+    user_address: data.user?.user_address || userAddress,
+  };
+};
+
+interface SimplifiedKYCResponse {
+  isverified: boolean;
+  email: string;
+  user_address: string;
+}
+
+async function verifyKYCWithAPI(
+  runtime: Runtime<Config>,
+  userAddress: string
+): Promise<SimplifiedKYCResponse> {
+  const config = runtime.config;
+
+  // Modo mock para testing
+  if (config.useMock) {
+    const approved = config.mockOnfidoApproved !== undefined ? config.mockOnfidoApproved : true;
+    runtime.log(`[MOCK] KYC verification: ${approved ? "APPROVED" : "REJECTED"}`);
+    return {
+      isverified: approved,
+      email: `${userAddress.slice(0, 8)}@mock.com`,
+      user_address: userAddress,
+    };
   }
 
-  runtime.log(`Applicant ID encontrado: ${parsed.applicantId}`);
-  return parsed.applicantId;
+  runtime.log(`Verificando KYC con API para usuario: ${userAddress}`);
+
+  // HTTPClient con ConsensusAggregationByFields como en la documentación
+  const httpClient = new cre.capabilities.HTTPClient();
+
+  const kycResult = await httpClient
+    .sendRequest(
+      runtime,
+      fetchKYCVerification,
+      ConsensusAggregationByFields({
+        isverified: identical,       // Campo crítico: debe ser identical
+        email: identical,             // Email debe ser identical
+        user_address: identical,      // Address debe ser identical
+      })
+    )(config.kycApiUrl, userAddress, config.kycApiToken)
+    .result();
+
+  runtime.log(`KYC API Response: ${JSON.stringify(kycResult)}`);
+  
+  return kycResult;
 }
 
-function mockOnfidoCheck(
-  runtime: Runtime<Config>,
-  applicantId: string
-): OnfidoCheckResponse {
-  const config = runtime.getConfig();
-
-  const approved =
-    config.mockOnfidoApproved !== undefined
-      ? config.mockOnfidoApproved
-      : true;
-
-  runtime.log(
-    `[MOCK] Onfido result: ${approved ? "APPROVED" : "REJECTED"}`
-  );
-
-  return {
-    id: applicantId,
-    status: "complete",
-    type: "express",
-    result: approved ? "clear" : "consider",
-    created_at: new Date().toISOString(),
-    document_ids: ["doc-1"],
-    report_ids: approved ? ["report-1"] : [],
+function hashKYCResult(apiResponse: SimplifiedKYCResponse): string {
+  // Crear un objeto consistente para hashear
+  const dataToHash = {
+    isverified: apiResponse.isverified,
+    email: apiResponse.email,
+    user_address: apiResponse.user_address,
+    timestamp: Math.floor(Date.now() / 1000),
   };
-}
-
-function hashCheckResult(check: OnfidoCheckResponse): string {
-  const json = JSON.stringify(check);
-  return keccak256(toUtf8Bytes(json));
+  const jsonStr = JSON.stringify(dataToHash);
+  const hashBytes = keccak256(toUtf8Bytes(jsonStr));
+  return hashBytes;
 }
 
 //
@@ -113,54 +143,64 @@ function hashCheckResult(check: OnfidoCheckResponse): string {
 // -------------------------
 const onKYCRequested = async (
   runtime: Runtime<Config>,
-  event: KYCRequestedEvent
+  log: any
 ) => {
-  const { user, nullifierHash } = event;
+  // Extraer datos del evento
+  const user = log.args[0] as string;
+  const nullifierHash = log.args[1];
+  const timestamp = log.args[2];
 
   runtime.log(`\n--- Nueva solicitud KYC para ${user} ---`);
   runtime.log(`NullifierHash: ${nullifierHash}`);
+  runtime.log(`Timestamp: ${timestamp}`);
 
-  // 1. Obtener Applicant ID (real o mock)
-  const applicantId = await fetchApplicantId(runtime, user);
+  try {
+    // 1. Verificar KYC con tu API (o mock)
+    const kycResult = await verifyKYCWithAPI(runtime, user);
 
-  // 2. Mock del resultado Onfido
-  const check = mockOnfidoCheck(runtime, applicantId);
+    // 2. Determinar aprobación
+    const approved = kycResult.isverified;
+    runtime.log(`KYC ${approved ? "APROBADO" : "RECHAZADO"} para ${user}`);
 
-  // Determinación de aprovado/rechazado
-  const approved = check.result === "clear";
+    // 3. Hashear resultado
+    const hash = hashKYCResult(kycResult);
+    runtime.log(`Hash del KYC: ${hash}`);
 
-  runtime.log(`Aprobado: ${approved}`);
+    // 4. Enviar fulfillKYC() a tu contrato
+    const config = runtime.config;
+    const contractAbi = contractAbiJson.abi;
 
-  // 3. Hashear resultado
-  const hash = hashCheckResult(check);
-  runtime.log(`Hash del KYC: ${hash}`);
+    const worldchainSelector = 5299555114858065850n;
 
-  // 4. Enviar fulfillKYC() a tu contrato
-  const config = runtime.getConfig();
-  const contractAbi = contractAbiJson.abi;
+    const evm = new cre.capabilities.EVMClient(worldchainSelector);
 
-  const worldchainSelector = 5299555114858065850n;
+    runtime.log(`Llamando fulfillKYC en contrato ${config.kycIssuerAddress}`);
+    runtime.log(`Parámetros: user=${user}, approved=${approved}, hash=${hash}`);
 
-  const evm = new cre.capabilities.EVMClient(worldchainSelector);
-
-  const tx = await evm
-    .callContract(runtime, {
-      to: config.kycIssuerAddress,
+    // Enviar transacción al contrato
+    const callParams: any = {
+      address: config.kycIssuerAddress,
       abi: contractAbi,
       function: "fulfillKYC",
       args: [user, approved, hash],
-    })
-    .result();
+    };
+    
+    const tx = await evm.callContract(runtime as any, callParams).result();
 
-  runtime.log(`Tx enviada → ${tx.transactionHash}`);
-  runtime.log(`KYC completado para ${user}`);
+    runtime.log(`Tx enviada → ${JSON.stringify(tx)}`);
+    runtime.log(`KYC completado para ${user}`);
 
-  return {
-    user,
-    approved,
-    hash,
-    tx: tx.transactionHash,
-  };
+    return {
+      user,
+      approved,
+      hash,
+      tx,
+      kycData: kycResult,
+    };
+  } catch (error) {
+    runtime.log(`ERROR en KYC para ${user}: ${error}`);
+    throw error;
+  }
 };
 
 //
@@ -172,13 +212,15 @@ const initWorkflow = async (config: Config) => {
   const evm = new cre.capabilities.EVMClient(worldchainSelector);
   const contractAbi = contractAbiJson.abi;
 
+  const triggerConfig: any = {
+    addresses: [config.kycIssuerAddress],
+    abi: contractAbi,
+    eventName: "KYCRequested",
+  };
+
   return [
     cre.handler(
-      evm.logTrigger({
-        contractAddress: config.kycIssuerAddress,
-        abi: contractAbi,
-        eventName: "KYCRequested",
-      }),
+      evm.logTrigger(triggerConfig),
       onKYCRequested
     ),
   ];
