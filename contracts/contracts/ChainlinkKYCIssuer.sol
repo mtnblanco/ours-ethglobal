@@ -223,6 +223,10 @@ contract ChainlinkKYCIssuer is AccessControl, Pausable, ReentrancyGuard {
     error RejectionCooldownNotPassed();
     error InvalidConfiguration();
     error ZeroAddress();
+    // Additional errors for testing compatibility
+    error InvalidUser();
+    error NoKYCRequest();
+    error KYCAlreadyProcessed();
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
