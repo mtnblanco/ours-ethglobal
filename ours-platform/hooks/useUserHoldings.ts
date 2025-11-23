@@ -1,4 +1,4 @@
-import { useReadContracts, useAccount } from 'wagmi';
+import { useReadContracts } from 'wagmi';
 import { Address, erc20Abi } from 'viem';
 import { useAllProperties, usePropertiesWithSales } from './usePropertyRegistry';
 
@@ -17,9 +17,9 @@ export interface UserHolding {
 
 /**
  * Hook to get all user token holdings across all properties
+ * @param userAddress - The user's wallet address (from MiniKit or Wagmi)
  */
-export function useUserHoldings() {
-  const { address: userAddress } = useAccount();
+export function useUserHoldings(userAddress?: Address | null) {
   const { propertyAddresses, isLoading: isLoadingAddresses } = useAllProperties();
   const { properties: allProperties, isLoading: isLoadingProperties } = usePropertiesWithSales(propertyAddresses);
 
@@ -73,10 +73,9 @@ export function useUserHoldings() {
 
 /**
  * Hook to get user's USDC balance
+ * @param userAddress - The user's wallet address (from MiniKit or Wagmi)
  */
-export function useUSDCBalance() {
-  const { address: userAddress } = useAccount();
-
+export function useUSDCBalance(userAddress?: Address | null) {
   const { data, isLoading } = useReadContracts({
     contracts: [
       {

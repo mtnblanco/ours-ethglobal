@@ -10,7 +10,7 @@ import TabNavigation from '@/components/TabNavigation';
 import { useAllProperties, usePropertiesWithSales, formatTokenAmount, formatBasisPoints } from '@/hooks/usePropertyRegistry';
 import { useUSDCBalance } from '@/hooks/useUserHoldings';
 import { useBuyTokens } from '@/hooks/useBuyTokens';
-import { useAccount } from 'wagmi';
+import { useMiniKitAuth } from '@/hooks/useMiniKitAuth';
 import { Address } from 'viem';
 
 export default function PropertyDetailPage() {
@@ -23,10 +23,11 @@ export default function PropertyDetailPage() {
         propertyId: propertyId
     });
 
-    const { address: userAddress } = useAccount();
+    // Use MiniKit authentication instead of Wagmi
+    const { address: userAddress, isConnected, isMiniKit, authenticate } = useMiniKitAuth();
     const { propertyAddresses, isLoading: isLoadingAddresses } = useAllProperties();
     const { properties: allProperties, isLoading: isLoadingProperties } = usePropertiesWithSales(propertyAddresses);
-    const { formatted: usdcBalance, balance: usdcBalanceRaw, isLoading: isLoadingBalance } = useUSDCBalance();
+    const { formatted: usdcBalance, balance: usdcBalanceRaw, isLoading: isLoadingBalance } = useUSDCBalance(userAddress);
     const { buyTokens, isPending, isConfirming, isConfirmed, error: buyError } = useBuyTokens();
 
     const propertyWithSale = allProperties?.find((p: any) => p?.property?.token?.toLowerCase() === propertyId?.toLowerCase());
@@ -85,9 +86,19 @@ export default function PropertyDetailPage() {
 
     // Handle buy tokens
     const handleBuyTokens = async () => {
-        if (!userAddress) {
-            alert('Please connect your wallet first');
+        // Check if in MiniKit environment
+        if (!isMiniKit) {
+            alert('Please open this app in World App to invest');
             return;
+        }
+
+        if (!userAddress) {
+            // Try to authenticate
+            const address = await authenticate();
+            if (!address) {
+                alert('Failed to authenticate with World App');
+                return;
+            }
         }
 
         if (grandTotal > userBalanceNumber) {
@@ -106,6 +117,7 @@ export default function PropertyDetailPage() {
 
             if (result.success) {
                 alert('Purchase successful! Transaction ID: ' + result.transactionId);
+                // Optionally refresh the page or balances
             } else {
                 alert('Purchase failed: ' + result.error);
             }
@@ -363,15 +375,17 @@ export default function PropertyDetailPage() {
 
                                     <button
                                         onClick={handleBuyTokens}
-                                        disabled={!userAddress || grandTotal > userBalanceNumber || isBuying || isPending || isConfirming}
+                                        disabled={!isMiniKit || grandTotal > userBalanceNumber || isBuying || isPending || isConfirming}
                                         className="w-full py-4 rounded-lg font-bold text-lg transition-all bg-[#2D2E63] text-[#B0CBFF] hover:bg-[#1E2046] hover:scale-[1.02] active:scale-[0.98] disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100"
                                     >
-                                        {!userAddress
-                                            ? 'Connect Wallet to Invest'
-                                            : isBuying || isPending
-                                            ? 'Processing...'
+                                        {!isMiniKit
+                                            ? 'Open in World App to Invest'
+                                            : isPending
+                                            ? 'Approving USDC...'
                                             : isConfirming
-                                            ? 'Confirming...'
+                                            ? 'Confirming Purchase...'
+                                            : isBuying
+                                            ? 'Processing...'
                                             : grandTotal > userBalanceNumber
                                             ? 'Insufficient Balance'
                                             : 'Invest Now'}
