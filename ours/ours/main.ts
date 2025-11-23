@@ -1,5 +1,6 @@
 import { cre, Runner, type Runtime } from "@chainlink/cre-sdk";
 import { keccak256, toUtf8Bytes } from "ethers";
+import contractAbiJson from "./abis/ChainlinkKYCIssuer.json";
 
 // Tipo para la configuración del workflow
 type Config = {
@@ -116,10 +117,8 @@ const onKYCRequested = async (runtime: Runtime<Config>, event: KYCRequestedEvent
   // Paso 5: Llamar fulfillKYC() en el contrato
   runtime.log(`Calling fulfillKYC on contract: ${config.kycIssuerAddress}`);
   
-  // Leer el ABI del contrato para poder usarlo
-  const abiPath = "./abis/ChainlinkKYCIssuer.json";
-  const abiFile = await Bun.file(abiPath).json();
-  const contractAbi = abiFile.abi;
+  // Usar el ABI importado directamente
+  const contractAbi = contractAbiJson.abi;
   
   // Llamar la función fulfillKYC usando EVMClient
   // Worldchain Sepolia chain selector: 5299555114858065850
@@ -152,10 +151,8 @@ const initWorkflow = async (config: Config) => {
   // Worldchain Sepolia chain selector: 5299555114858065850
   const evmClient = new cre.capabilities.EVMClient(5299555114858065850n);
   
-  // Cargar el ABI del contrato para el trigger
-  const abiPath = "./abis/ChainlinkKYCIssuer.json";
-  const abiFile = await Bun.file(abiPath).json();
-  const contractAbi = abiFile.abi;
+  // Usar el ABI importado directamente
+  const contractAbi = contractAbiJson.abi;
   
   // Crear el trigger para escuchar el evento KYCRequested
   return [

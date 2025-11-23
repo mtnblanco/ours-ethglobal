@@ -15310,7 +15310,7 @@ var onKYCRequested = async (runtime2, event) => {
   runtime2.log(`KYC approved: ${approved}`);
   runtime2.log(`Calling fulfillKYC on contract: ${config.kycIssuerAddress}`);
   const contractAbi = ChainlinkKYCIssuer_default.abi;
-  const evmClient = new cre.capabilities.EVMClient("ethereum-testnet-sepolia-worldchain-1");
+  const evmClient = new cre.capabilities.EVMClient(5299555114858065850n);
   const callContractRequest = {
     to: config.kycIssuerAddress,
     abi: contractAbi,
@@ -15329,7 +15329,7 @@ var onKYCRequested = async (runtime2, event) => {
   };
 };
 var initWorkflow = async (config) => {
-  const evmClient = new cre.capabilities.EVMClient("ethereum-testnet-sepolia-worldchain-1");
+  const evmClient = new cre.capabilities.EVMClient(5299555114858065850n);
   const contractAbi = ChainlinkKYCIssuer_default.abi;
   return [
     cre.handler(evmClient.logTrigger({

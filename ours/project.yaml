@@ -19,10 +19,7 @@ staging-settings:
   rpcs:
     - chain-name: ethereum-testnet-sepolia
       url: https://ethereum-sepolia-rpc.publicnode.com
-    # Worldchain Sepolia - usando chain selector directamente en el código
-    # Chain selector: 5299555114858065850
-    - chain-selector: 5299555114858065850
-      url: https://worldchain-sepolia.g.alchemy.com/v2/Kj5XiLkA6QkJdQKMKGlBk6dOxQw4n1aP
+    # Nota: El código usa chain selector 5299555114858065850 directamente para World Chain Sepolia
 
 # ==========================================================================
 production-settings:
@@ -30,5 +27,5 @@ production-settings:
     - chain-name: ethereum-testnet-sepolia
       url: https://ethereum-sepolia-rpc.publicnode.com
     # Worldchain Sepolia - usando chain selector directamente
-    - chain-selector: 5299555114858065850
-      url: https://worldchain-sepolia.g.alchemy.com/v2/Kj5XiLkA6QkJdQKMKGlBk6dOxQw4n1aP
+    - url: https://worldchain-sepolia.g.alchemy.com/v2/Kj5XiLkA6QKMKGlBk6dOxQw4n1aP
+      chain-selector: "5299555114858065850"
